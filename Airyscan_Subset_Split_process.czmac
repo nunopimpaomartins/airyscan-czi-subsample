@@ -12,41 +12,12 @@ import math
 
 strPath = Environment.CurrentDirectory
 
-#AiryScan Parameters
-airy = Zen.Application.Environment.GetFolderPath(ZenSpecialFolder.Documents)
-airyPath = airy + '\\' + 'Carl Zeiss\ZEN\Documents\Processing Settings\AiryScanProcessing'
-SCfileNames = []
-SCtype = '*.czips'
-SCfiles = Directory.GetFiles(airyPath,SCtype)
-
-for file in SCfiles: 
-    # SCfile = SCfiles[i] 
-    SCfileInfo = FileInfo(file) 
-    # SCOrgFileNameWE = SCfileInfo.Name.Substring(0,SCfileInfo.Name.Length-6)
-    SCOrgFileNameWE = SCfileInfo.Name.Substring(0, SCfileInfo.Name.index('.czips'))
-    SCfileNames.append(SCOrgFileNameWE)
-
-
-# *** Get split scene parameters ***
-split_doc = Zen.Application.Environment.GetFolderPath(ZenSpecialFolder.Documents)
-splitPath = split_doc + '\\' + 'Carl Zeiss\ZEN\Documents\Processing Settings\SplitScenes'
-SCfileNames1 = []
-SCtype1 = '*.czips'
-SCfiles1 = Directory.GetFiles(splitPath,SCtype1)
-
-for file in SCfiles1: 
-    # SCfile1 = SCfiles1[i] 
-    SCfileInfo1 = FileInfo(file) 
-    # SCOrgFileNameWE1 = SCfileInfo1.Name.Substring(0,SCfileInfo1.Name.Length-6)
-    SCOrgFileNameWE1 = SCfileInfo1.Name.Substring(0, SCfileInfo1.Name.index('czips'))
-    SCfileNames1.append(SCOrgFileNameWE1)
-
 #GUI WIndow
 mainWindow = ZenWindow()
 mainWindow.AddFolderBrowser("path1","Image Folder",strPath,"1","0")
 mainWindow.AddFolderBrowser("path2","Output Folder",strPath,"2","0")
-mainWindow.AddDropDown('SCval','Select AiryScan Setting         ', SCfileNames, 0)
-mainWindow.AddDropDown('SCval1','Select Splitting Setting         ', SCfileNames1, 0)
+# mainWindow.AddDropDown('SCval','Select AiryScan Setting         ', SCfileNames, 0)
+# mainWindow.AddDropDown('SCval1','Select Splitting Setting         ', SCfileNames1, 0)
 result = mainWindow.Show()
 
 #  Load settings for Airyscan and SplitScenes
@@ -57,10 +28,10 @@ if result.Contains("path1"):
     OutPath   = str(result.GetValue("path2"))
     AY_choice = result.GetValue('SCval')
     AY_setting = ZenLSM.Processing.Utilities.Settings.AiryscanSetting()
-    AY_setting.Load(airyPath + '\\' + AY_choice + '.czips')
-    SC_choice = result.GetValue('SCval1')
-    SC_setting = Zen.Processing.Utilities.Settings.SplitScenesSetting()
-    SC_setting.Load(splitPath + '\\' + SC_choice + '.czips')
+    # AY_setting.Load(airyPath + '\\' + AY_choice + '.czips')
+    # SC_choice = result.GetValue('SCval1')
+    # SC_setting = Zen.Processing.Utilities.Settings.SplitScenesSetting()
+    # SC_setting.Load(splitPath + '\\' + SC_choice + '.czips')
     Environment.CurrentDirectory = strPath
 
 #Processing files: load image,  create subsets, airyscan process, split scenes, close
@@ -87,29 +58,31 @@ for i in range(0,filesL.Length):
     else:
         z_overlap_offset = math.ceil(z_overlap / 2)
     
-    z_sub1_upperbound = z_middle + (z_overlap // 2)
-    z_sub2_lowerbound = z_middle - (z_overlap // 2)
+    z_sub1_upperbound = z_middle + z_overlap_offset
+    z_sub2_lowerbound = z_middle - z_overlap_offset
 
-    Stack = "Z(" + str(1) + " - " + str(z_middle + z_overlap_offset) + ")"
-    Stack2 = "Z(" + str(z_middle - z_overlap_offset) + "-" + str(z) + ")"
+    Stack = "Z(" + str(1) + "-" + str(z_sub1_upperbound) + ")"
+    Stack2 = "Z(" + str(z+1) + "-" + str(z_sub2_lowerbound) + ")"
 
-    Sub1 = Zen.Processing.Utilities.CreateSubset(image, Stack, False,False)
+    image2 = Zen.Processing.Utilities.CreateSubset(image, Stack)
     #Zen.Application.Documents.Add(Sub1)
-    image2 = ZenLSM.Processing.Utilities.Airyscan(Sub1, AY_setting, 4.7, False)
+    # image2 = ZenLSM.Processing.Utilities.Airyscan(Sub1, AY_setting, 4.7, False)
+    # image2 = ZenLSM.Processing.Utilities.Airyscan(Sub1, None, 4.7, False) # uncomment me
     Zen.Application.Documents.Add(image2)
     image2.Name=OrgFileNameWE + "_Sub1_"
     Zen.Processing.Utilities.SplitScenes(image2, OutPath, ZenCompressionMethod.None, False, False, False)
     image2.Close()
-    Sub1.Close()
-    
-    Sub2= Zen.Processing.Utilities.CreateSubset(image, Stack2, False,False)
+    # Sub1.Close()
+
+    image3 = Zen.Processing.Utilities.CreateSubset(image, Stack2)
     #Zen.Application.Documents.Add(Sub2)
-    image3 = ZenLSM.Processing.Utilities.Airyscan(Sub2, AY_setting, 4.7, False)
+    # image3 = ZenLSM.Processing.Utilities.Airyscan(Sub2, AY_setting, 4.7, False)
+    # image3 = ZenLSM.Processing.Utilities.Airyscan(Sub2, None, 4.7, False) # uncomment me
     Zen.Application.Documents.Add(image3)
     image3.Name=OrgFileNameWE + "_Sub2_"
     Zen.Processing.Utilities.SplitScenes(image3, OutPath, ZenCompressionMethod.None, False, False, False)
     image3.Close()
-    Sub2.Close()
+    # Sub2.Close()
     image.Close()
 
 </Text>
