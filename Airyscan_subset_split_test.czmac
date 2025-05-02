@@ -1,0 +1,88 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Script>
+<Context>Zen26</Context>
+<Version>1.0</Version>
+<Language>Python</Language>
+<Text>
+
+# *************** Recorded Code Block ***************
+from System.IO import File, Directory, FileInfo, Path 
+from System import Environment
+import math
+
+strPath = Environment.CurrentDirectory
+
+#GUI WIndow
+mainWindow = ZenWindow()
+mainWindow.AddFolderBrowser("path1","Image Folder",strPath,"1","0")
+mainWindow.AddFolderBrowser("path2","Output Folder",strPath,"2","0")
+# mainWindow.AddDropDown('SCval','Select AiryScan Setting         ', SCfileNames, 0)
+# mainWindow.AddDropDown('SCval1','Select Splitting Setting         ', SCfileNames1, 0)
+result = mainWindow.Show()
+
+#  Load settings for Airyscan and SplitScenes
+
+if result.Contains("path1"):
+    strPath   = str(result.GetValue("path1"))
+    filesL = Directory.GetFiles(strPath,"*.czi")
+    OutPath   = str(result.GetValue("path2"))
+    Environment.CurrentDirectory = strPath
+
+#Processing files: load image,  create subsets, airyscan process, split scenes, close
+
+for i in range(0,filesL.Length): 
+    file = filesL[i]
+    fileInfo = FileInfo(file) 
+    PathAndFile = strPath + "\\" + fileInfo.Name
+    image = Zen.Application.LoadImage(PathAndFile,False)
+    OrgFileNameWE = image.Name.Substring(0,image.Name.index('.czi'))
+    #Zen.Application.Documents.Add(image)
+    z = image.Bounds.SizeZ
+    z_middle = z//2
+    z_overlap = math.ceil(z/10) # to get an overlap of 10% for stitching
+    
+    # to assure the overlap is bigger if dividing stack in half gives an odd number
+    if z_overlap % 2 == 0:
+        z_overlap_offset = z_overlap / 2
+    else:
+        z_overlap_offset = math.ceil(z_overlap / 2)
+    
+    z_sub1_upperbound = z_middle + z_overlap_offset
+    z_sub2_lowerbound = z_middle - z_overlap_offset
+
+    Stack = "Z(" + str(1) + "-" + str(z_sub1_upperbound) + ")"
+    Stack2 = "Z(" + str(z+1) + "-" + str(z_sub2_lowerbound) + ")"
+
+    # check if stack has tiles
+    tiles = image.Bounds.SizeM
+
+    if tiles > 1:
+        image2 = Zen.Processing.Utilities.CreateSubset(image, Stack, True)
+    else:
+        image2 = Zen.Processing.Utilities.CreateSubset(image, Stack)
+    
+    Zen.Application.Documents.Add(image2)
+    image2.Name=OrgFileNameWE + "_Sub1_"
+    Zen.Processing.Utilities.SplitScenes(image2, OutPath, ZenCompressionMethod.Zstd, False, False, False)
+    image2.Close()
+    # Sub1.Close()
+
+    if tiles > 1:
+        image3 = Zen.Processing.Utilities.CreateSubset(image, Stack2, True)
+    else:
+        image3 = Zen.Processing.Utilities.CreateSubset(image, Stack2)
+    
+    #Zen.Application.Documents.Add(Sub2)
+    Zen.Application.Documents.Add(image3)
+    image3.Name=OrgFileNameWE + "_Sub2_"
+    Zen.Processing.Utilities.SplitScenes(image3, OutPath, ZenCompressionMethod.Zstd, False, False, False)
+    image3.Close()
+    image.Close()
+
+</Text>
+  <Author></Author>
+  <Description></Description>
+  <Keywords></Keywords>
+  <Row>84</Row>
+  <Column>17</Column>
+</Script>
