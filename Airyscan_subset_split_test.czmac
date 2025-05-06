@@ -16,16 +16,16 @@ strPath = Environment.CurrentDirectory
 mainWindow = ZenWindow()
 mainWindow.AddFolderBrowser("path1","Image Folder",strPath,"1","0")
 mainWindow.AddFolderBrowser("path2","Output Folder",strPath,"2","0")
-# mainWindow.AddDropDown('SCval','Select AiryScan Setting         ', SCfileNames, 0)
-# mainWindow.AddDropDown('SCval1','Select Splitting Setting         ', SCfileNames1, 0)
-result = mainWindow.Show()
+# mainWindow.AddCheckbox('useCompression', 'Save with compression', True)
+wd = mainWindow.Show()
 
 #  Load settings for Airyscan and SplitScenes
 
-if result.Contains("path1"):
-    strPath   = str(result.GetValue("path1"))
+if wd.Contains("path1"):
+    strPath   = str(wd.GetValue("path1"))
     filesL = Directory.GetFiles(strPath,"*.czi")
-    OutPath   = str(result.GetValue("path2"))
+    OutPath   = str(wd.GetValue("path2"))
+    # saveCompression = wd.GetValue("useCompression")
     Environment.CurrentDirectory = strPath
 
 #Processing files: load image,  create subsets, airyscan process, split scenes, close
@@ -50,33 +50,30 @@ for i in range(0,filesL.Length):
     z_sub1_upperbound = z_middle + z_overlap_offset
     z_sub2_lowerbound = z_middle - z_overlap_offset
 
-    Stack = "Z(" + str(1) + "-" + str(z_sub1_upperbound) + ")"
-    Stack2 = "Z(" + str(z+1) + "-" + str(z_sub2_lowerbound) + ")"
+    # Stack = "Z(" + str(1) + "-" + str(z_sub1_upperbound) + ")"
+    # Stack2 = "Z(" + str(z+1) + "-" + str(z_sub2_lowerbound) + ")"
+    Stack = "Z(1-10)"
+    Stack2 = "Z(18-8)"
+    Stack3 = "Z(26-16)"
 
-    # check if stack has tiles
-    tiles = image.Bounds.SizeM
-
-    if tiles > 1:
-        image2 = Zen.Processing.Utilities.CreateSubset(image, Stack, True)
-    else:
-        image2 = Zen.Processing.Utilities.CreateSubset(image, Stack)
+    image2 = Zen.Processing.Utilities.CreateSubset(image, Stack)
     
     Zen.Application.Documents.Add(image2)
     image2.Name=OrgFileNameWE + "_Sub1_"
-    Zen.Processing.Utilities.SplitScenes(image2, OutPath, ZenCompressionMethod.Zstd, False, False, False)
+    Zen.Processing.Utilities.SplitScenes(image2, OutPath, ZenCompressionMethod.None, False, False, False)
     image2.Close()
-    # Sub1.Close()
 
-    if tiles > 1:
-        image3 = Zen.Processing.Utilities.CreateSubset(image, Stack2, True)
-    else:
-        image3 = Zen.Processing.Utilities.CreateSubset(image, Stack2)
-    
-    #Zen.Application.Documents.Add(Sub2)
+    image3 = Zen.Processing.Utilities.CreateSubset(image, Stack2)
     Zen.Application.Documents.Add(image3)
     image3.Name=OrgFileNameWE + "_Sub2_"
-    Zen.Processing.Utilities.SplitScenes(image3, OutPath, ZenCompressionMethod.Zstd, False, False, False)
+    Zen.Processing.Utilities.SplitScenes(image3, OutPath, ZenCompressionMethod.None, False, False, False)
     image3.Close()
+
+    image4 = Zen.Processing.Utilities.CreateSubset(image, Stack3)
+    Zen.Application.Documents.Add(image4)
+    image4.Name=OrgFileNameWE + "_Sub3_"
+    Zen.Processing.Utilities.SplitScenes(image4, OutPath, ZenCompressionMethod.None, False, False, False)
+    image4.Close()
     image.Close()
 
 </Text>
