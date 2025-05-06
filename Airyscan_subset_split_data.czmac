@@ -36,7 +36,7 @@ for i in range(0,filesL.Length):
     fileInfo = FileInfo(file) 
     PathAndFile = strPath + "\\" + fileInfo.Name
     image = Zen.Application.LoadImage(PathAndFile,False)
-    OrgFileNameWE = image.Name.Substring(0,image.Name.index('.czi'))
+    filename_no_ext = image.Name.Substring(0,image.Name.index('.czi'))
     #Zen.Application.Documents.Add(image)
     z = image.Bounds.SizeZ
 
@@ -44,48 +44,25 @@ for i in range(0,filesL.Length):
         z_split_factor = math.ceil(z / max_z_slices)
         stack_range_subets = [None]*z_split_factor
     
-    for i in range(len(stack_range_subets)):
-        z_middle = z // z_split_factor
-        if i == 0:
-            stack_range_subets[i] = "Z("+str(1) + "-" + str( (i + 1) * z_middle) + ")"
-        elif i == len(stack_range_subets):
-            stack_range_subets[i] = "Z("+str(z) + "-" + str( (i) * z_middle) + ")"
+    z_middle = z // z_split_factor
+    z_middle_overlap = math.ceil(z_middle * 0.05)
+
+    for j in range(len(stack_range_subets)):
+        if j == 0:
+            stack_range_subets[j] = "Z("+str(1) + "-" + str( ((j + 1) * z_middle) + z_middle_overlap) + ")"
+        elif j == len(stack_range_subets)-1:
+            stack_range_subets[j] = "Z("+str(z) + "-" + str( ((j) * z_middle) - z_middle_overlap) + ")"
         else:
-            stack_range_subets[i] = "Z("+str((i + 1) * z_middle) + "-" + str( i * z_middle) + ")"
+            stack_range_subets[j] = "Z("+str(((j + 1) * z_middle) + z_middle_overlap) + "-" + str( j * z_middle) + ")"
 
-    z_middle = z//2
-    z_overlap = math.ceil(z/10) # to get an overlap of 10% for stitching
     
-    # to assure the overlap is bigger if dividing stack in half gives an odd number
-    if z_overlap % 2 == 0:
-        z_overlap_offset = z_overlap / 2
-    else:
-        z_overlap_offset = math.ceil(z_overlap / 2)
+    for j in range(len(stack_range_subets)):
+        substack = Zen.Processing.Utilities.CreateSubset(image, stack_range_subets[j])
+        Zen.Application.Documents.Add(substack)
+        substack.Name = filename_no_ext + "_sub" + str(j+1)
+        Zen.Processing.Utilities.SplitScenes(substack, OutPath, ZenCompressionMethod.None, False, False, False) 
+        substack.Close()
     
-    z_sub1_upperbound = z_middle + z_overlap_offset
-    z_sub2_lowerbound = z_middle - z_overlap_offset
-
-    Stack = "Z(" + str(1) + "-" + str(z_sub1_upperbound) + ")"
-    Stack2 = "Z(" + str(z+1) + "-" + str(z_sub2_lowerbound) + ")"
-
-    image2 = Zen.Processing.Utilities.CreateSubset(image, Stack)
-    
-    Zen.Application.Documents.Add(image2)
-    image2.Name=OrgFileNameWE + "_Sub1_"
-    Zen.Processing.Utilities.SplitScenes(image2, OutPath, ZenCompressionMethod.None, False, False, False)
-    image2.Close()
-
-    image3 = Zen.Processing.Utilities.CreateSubset(image, Stack2)
-    Zen.Application.Documents.Add(image3)
-    image3.Name=OrgFileNameWE + "_Sub2_"
-    Zen.Processing.Utilities.SplitScenes(image3, OutPath, ZenCompressionMethod.None, False, False, False)
-    image3.Close()
-
-    image4 = Zen.Processing.Utilities.CreateSubset(image, Stack3)
-    Zen.Application.Documents.Add(image4)
-    image4.Name=OrgFileNameWE + "_Sub3_"
-    Zen.Processing.Utilities.SplitScenes(image4, OutPath, ZenCompressionMethod.None, False, False, False)
-    image4.Close()
     image.Close()
 
 </Text>
