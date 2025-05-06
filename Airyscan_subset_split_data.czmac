@@ -11,6 +11,7 @@ from System import Environment
 import math
 
 strPath = Environment.CurrentDirectory
+max_z_slices = 300
 
 #GUI WIndow
 mainWindow = ZenWindow()
@@ -39,9 +40,18 @@ for i in range(0,filesL.Length):
     #Zen.Application.Documents.Add(image)
     z = image.Bounds.SizeZ
 
-    if z > 300:
-        z_split_factor = math.ceil(z / 300)
-
+    if z > max_z_slices:
+        z_split_factor = math.ceil(z / max_z_slices)
+        stack_range_subets = [None]*z_split_factor
+    
+    for i in range(len(stack_range_subets)):
+        z_middle = z // z_split_factor
+        if i == 0:
+            stack_range_subets[i] = "Z("+str(1) + "-" + str( (i + 1) * z_middle) + ")"
+        elif i == len(stack_range_subets):
+            stack_range_subets[i] = "Z("+str(z) + "-" + str( (i) * z_middle) + ")"
+        else:
+            stack_range_subets[i] = "Z("+str((i + 1) * z_middle) + "-" + str( i * z_middle) + ")"
 
     z_middle = z//2
     z_overlap = math.ceil(z/10) # to get an overlap of 10% for stitching
