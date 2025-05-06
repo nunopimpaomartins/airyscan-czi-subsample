@@ -40,9 +40,11 @@ for i in range(0,filesL.Length):
     #Zen.Application.Documents.Add(image)
     z = image.Bounds.SizeZ
 
+    stack_range_subets = []
     if z > max_z_slices:
         z_split_factor = math.ceil(z / max_z_slices)
-        stack_range_subets = range(int(z_split_factor))
+        for j in range(int(z_split_factor)):
+            stack_range_subets ,= j
         z_middle = math.floor(z / z_split_factor)
         z_middle_overlap = math.ceil(z_middle * 0.05)
 
