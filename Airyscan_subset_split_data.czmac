@@ -42,7 +42,7 @@ for i in range(0,filesL.Length):
 
     if z > max_z_slices:
         z_split_factor = math.ceil(z / max_z_slices)
-        stack_range_subets = range(z_split_factor)
+        stack_range_subets = range(int(z_split_factor))
         z_middle = math.floor(z / z_split_factor)
         z_middle_overlap = math.ceil(z_middle * 0.05)
 
