@@ -48,7 +48,7 @@ for i in range(0,filesL.Length):
         z_middle = math.floor(z / z_split_factor)
         z_middle_overlap = math.ceil(z_middle * 0.05)
 
-    for j in range(0, len(stack_range_subets)):
+    for j in range(0, stack_range_subets.Length):
         if j == 0:
             stack_range_subets[j] = "Z("+str(1) + "-" + str( ((j + 1) * z_middle) + z_middle_overlap) + ")"
         elif j == len(stack_range_subets)-1:
@@ -57,7 +57,7 @@ for i in range(0,filesL.Length):
             stack_range_subets[j] = "Z("+str(((j + 1) * z_middle) + z_middle_overlap) + "-" + str( j * z_middle) + ")"
 
     
-    for j in range(0, len(stack_range_subets)):
+    for j in range(0, stack_range_subets.Length):
         substack = Zen.Processing.Utilities.CreateSubset(image, stack_range_subets[j])
         Zen.Application.Documents.Add(substack)
         substack.Name = filename_no_ext + "_sub" + str(j+1)
