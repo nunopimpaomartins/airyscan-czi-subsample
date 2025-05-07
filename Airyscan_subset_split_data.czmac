@@ -11,7 +11,7 @@ from System import Environment
 import math
 
 strPath = Environment.CurrentDirectory
-max_z_slices = 300
+max_z_slices = 300.
 
 #GUI WIndow
 mainWindow = ZenWindow()
@@ -38,14 +38,14 @@ for i in range(0,filesL.Length):
     image = Zen.Application.LoadImage(PathAndFile,False)
     filename_no_ext = image.Name.Substring(0,image.Name.index('.czi'))
     #Zen.Application.Documents.Add(image)
-    z = image.Bounds.SizeZ
+    z = float(image.Bounds.SizeZ)
 
     stack_range_subets = []
     if z > max_z_slices:
         z_split_factor = int(math.ceil(z / max_z_slices))
         for j in range(0, z_split_factor):
             stack_range_subets.append(str(j))
-        z_middle = int(math.floor(z / z_split_factor))
+        z_middle = math.floor(z / z_split_factor)
         z_middle_overlap = int(math.ceil(z_middle * 0.05))
 
     for j in range(0, len(stack_range_subets)):
