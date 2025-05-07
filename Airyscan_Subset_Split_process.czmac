@@ -11,27 +11,22 @@ from System import Environment
 import math
 
 strPath = Environment.CurrentDirectory
+max_z_slices = 300.
 
 #GUI WIndow
 mainWindow = ZenWindow()
 mainWindow.AddFolderBrowser("path1","Image Folder",strPath,"1","0")
 mainWindow.AddFolderBrowser("path2","Output Folder",strPath,"2","0")
-# mainWindow.AddDropDown('SCval','Select AiryScan Setting         ', SCfileNames, 0)
-# mainWindow.AddDropDown('SCval1','Select Splitting Setting         ', SCfileNames1, 0)
-result = mainWindow.Show()
+# mainWindow.AddCheckbox('useCompression', 'Save with compression', True)
+wd = mainWindow.Show()
 
 #  Load settings for Airyscan and SplitScenes
 
-if result.Contains("path1"):
-    strPath   = str(result.GetValue("path1"))
+if wd.Contains("path1"):
+    strPath   = str(wd.GetValue("path1"))
     filesL = Directory.GetFiles(strPath,"*.czi")
-    OutPath   = str(result.GetValue("path2"))
-    AY_choice = result.GetValue('SCval')
-    AY_setting = ZenLSM.Processing.Utilities.Settings.AiryscanSetting()
-    # AY_setting.Load(airyPath + '\\' + AY_choice + '.czips')
-    # SC_choice = result.GetValue('SCval1')
-    # SC_setting = Zen.Processing.Utilities.Settings.SplitScenesSetting()
-    # SC_setting.Load(splitPath + '\\' + SC_choice + '.czips')
+    OutPath   = str(wd.GetValue("path2"))
+    # saveCompression = wd.GetValue("useCompression")
     Environment.CurrentDirectory = strPath
 
 #Processing files: load image,  create subsets, airyscan process, split scenes, close
@@ -41,48 +36,35 @@ for i in range(0,filesL.Length):
     fileInfo = FileInfo(file) 
     PathAndFile = strPath + "\\" + fileInfo.Name
     image = Zen.Application.LoadImage(PathAndFile,False)
-    OrgFileNameWE = image.Name.Substring(0,image.Name.index('.czi'))
+    filename_no_ext = image.Name.Substring(0,image.Name.index('.czi'))
     #Zen.Application.Documents.Add(image)
-    z = image.Bounds.SizeZ
-    # z2= round(z/2)
-    # z3=z2-19
-    # Stack = "Z(" + str(0+1) + "-" + str(z2) +")"
-    # Stack2 = "Z(" + str(z+1) + "-" + str(z3) +")"
-    z_middle = z//2
-    
-    z_overlap = math.ceil(z/10) # to get an overlap of 10% for stitching
-    
-    # to assure the overlap is bigger if dividing stack in half gives an odd number
-    if z_overlap % 2 == 0:
-        z_overlap_offset = z_overlap / 2
-    else:
-        z_overlap_offset = math.ceil(z_overlap / 2)
-    
-    z_sub1_upperbound = z_middle + z_overlap_offset
-    z_sub2_lowerbound = z_middle - z_overlap_offset
+    z = float(image.Bounds.SizeZ)
 
-    Stack = "Z(" + str(1) + "-" + str(z_sub1_upperbound) + ")"
-    Stack2 = "Z(" + str(z+1) + "-" + str(z_sub2_lowerbound) + ")"
+    stack_range_subets = []
+    if z > max_z_slices:
+        z_split_factor = int(math.ceil(z / max_z_slices))
+        for j in range(0, z_split_factor):
+            stack_range_subets.append(str(j))
+        z_middle = math.floor(z / z_split_factor)
+        z_middle_overlap = int(math.ceil(z_middle * 0.05))
 
-    image2 = Zen.Processing.Utilities.CreateSubset(image, Stack)
-    #Zen.Application.Documents.Add(Sub1)
-    # image2 = ZenLSM.Processing.Utilities.Airyscan(Sub1, AY_setting, 4.7, False)
-    # image2 = ZenLSM.Processing.Utilities.Airyscan(Sub1, None, 4.7, False) # uncomment me
-    Zen.Application.Documents.Add(image2)
-    image2.Name=OrgFileNameWE + "_Sub1_"
-    Zen.Processing.Utilities.SplitScenes(image2, OutPath, ZenCompressionMethod.None, False, False, False)
-    image2.Close()
-    # Sub1.Close()
+    for j in range(0, len(stack_range_subets)):
+        if j == 0:
+            stack_range_subets[j] = "Z("+str(1) + "-" + str( ((j + 1) * z_middle) + z_middle_overlap) + ")"
+        elif j == len(stack_range_subets)-1:
+            stack_range_subets[j] = "Z("+str(z) + "-" + str( ((j) * z_middle) - z_middle_overlap) + ")"
+        else:
+            stack_range_subets[j] = "Z("+str(((j + 1) * z_middle) + z_middle_overlap) + "-" + str( j * z_middle) + ")"
 
-    image3 = Zen.Processing.Utilities.CreateSubset(image, Stack2)
-    #Zen.Application.Documents.Add(Sub2)
-    # image3 = ZenLSM.Processing.Utilities.Airyscan(Sub2, AY_setting, 4.7, False)
-    # image3 = ZenLSM.Processing.Utilities.Airyscan(Sub2, None, 4.7, False) # uncomment me
-    Zen.Application.Documents.Add(image3)
-    image3.Name=OrgFileNameWE + "_Sub2_"
-    Zen.Processing.Utilities.SplitScenes(image3, OutPath, ZenCompressionMethod.None, False, False, False)
-    image3.Close()
-    # Sub2.Close()
+    
+    for j in range(0, len(stack_range_subets)):
+        substack = Zen.Processing.Utilities.CreateSubset(image, stack_range_subets[j])
+        substack_processed = ZenLSM.Processing.Utilities.Airyscan(substack, None, 6.0, False)
+        Zen.Application.Documents.Add(substack_processed)
+        substack.Name = filename_no_ext + "_sub" + str(j+1) + "_Airyscan_processed"
+        Zen.Processing.Utilities.SplitScenes(substack_processed, OutPath, ZenCompressionMethod.None, False, False, False) 
+        substack_processed.Close()
+    
     image.Close()
 
 </Text>
