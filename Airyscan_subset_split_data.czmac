@@ -11,7 +11,7 @@ from System import Environment
 import math
 
 strPath = Environment.CurrentDirectory
-max_z_slices = 300.
+max_z_slices = 300. # empirical max number of Z planes for Airyscan processing
 
 #GUI WIndow
 mainWindow = ZenWindow()
@@ -29,7 +29,7 @@ if wd.Contains("path1"):
     # saveCompression = wd.GetValue("useCompression")
     Environment.CurrentDirectory = strPath
 
-#Processing files: load image,  create subsets, airyscan process, split scenes, close
+#Processing files: load image,  create subsets, airyscan process (not yet implemented), split scenes, close
 
 for i in range(0,filesL.Length): 
     file = filesL[i]
@@ -37,24 +37,27 @@ for i in range(0,filesL.Length):
     PathAndFile = strPath + "\\" + fileInfo.Name
     image = Zen.Application.LoadImage(PathAndFile,False)
     filename_no_ext = image.Name.Substring(0,image.Name.index('.czi'))
-    #Zen.Application.Documents.Add(image)
     z = float(image.Bounds.SizeZ)
 
-    stack_range_subets = []
+    # stack_range_subets = []
     if z > max_z_slices:
-        z_split_factor = int(math.ceil(z / max_z_slices))
-        for j in range(0, z_split_factor):
-            stack_range_subets.append(str(j))
-        z_middle = math.floor(z / z_split_factor)
-        z_middle_overlap = int(math.ceil(z_middle * 0.05))
+        z_split_factor = int(math.ceil(z / max_z_slices)) # number of substacks per volume to fit in memory
+        # for j in range(0, z_split_factor):
+            # stack_range_subets.append(str(j))
+        stack_range_subets = [str(0)]*z_split_factor
+        z_middle = math.floor(z / z_split_factor) # compute substack size to fit in memory
+        z_middle_overlap = int(math.ceil(z_middle * 0.05)) # computer substack 5% overlap in Z
+    else:
+        continue
 
     for j in range(0, len(stack_range_subets)):
         if j == 0:
-            stack_range_subets[j] = "Z("+str(1) + "-" + str( ((j + 1) * z_middle) + z_middle_overlap) + ")"
+            stack_range_subets[j] = "Z("+str(1) + "-" + str(((j + 1) * int(z_middle)) + z_middle_overlap) + ")"
         elif j == len(stack_range_subets)-1:
-            stack_range_subets[j] = "Z("+str(z) + "-" + str( ((j) * z_middle) - z_middle_overlap) + ")"
+            stack_range_subets[j] = "Z("+str(int(z)) + "-" + str( ((j) * int(z_middle)) - z_middle_overlap) + ")"
         else:
-            stack_range_subets[j] = "Z("+str(((j + 1) * z_middle) + z_middle_overlap) + "-" + str( j * z_middle) + ")"
+            # stack_range_subets[j] = "Z("+str(((j + 1) * int(z_middle)) + z_middle_overlap) + "-" + str( j * int(z_middle)) + ")"
+            stack_range_subets[j] = "Z(" + str( j * int(z_middle)) + "-" + str(((j + 1) * int(z_middle)) + z_middle_overlap) + ")"
 
     
     for j in range(0, len(stack_range_subets)):
