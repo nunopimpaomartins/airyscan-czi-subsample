@@ -5,7 +5,7 @@ import tqdm
 
 from bioio import BioImage
 import bioio_czi
-import pylibCZIrw as pyczi
+from pylibCZIrw import czi as pyczi
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--dataPath", help="The path to your data")
@@ -84,14 +84,15 @@ def main(datapath='.', extension='.tif'):
                                     },
                                     compression_options = "zstd0:ExplicitLevel=2"
                                 )
+                    
+                    czidoc_w.write_metadata(
+                        filename_noext + '_tile' + str(tile+1).zfill(2),
+                        channel_names=ch_names,
+                        scale_x=scale_x,
+                        scale_y=scale_y,
+                        scale_z=scale_z,
+                    )
                 
-                czidoc_w.write_metadata(
-                    filename_noext + '_tile' + str(tile+1).zfill(2),
-                    channel_names=ch_names,
-                    scale_x=scale_x,
-                    scale_y=scale_y,
-                    scale_z=scale_z,
-                )
 
 
 main(basedir, args.extension)
