@@ -55,9 +55,9 @@ def main(datapath='.', extension='.tif'):
 
             n_tiles = img.dims['M'][0]
 
-            scale_x = img.scale.X
-            scale_y = img.scale.Y
-            scale_z = img.scale.Z
+            scale_x = img.scale.X * 10**-6 # convert scale from BioIO to default CZI unit, which is meters
+            scale_y = img.scale.Y * 10**-6
+            scale_z = img.scale.Z * 10**-6
 
             for tile in range(n_tiles):
                 img_data = img.get_image_dask_data(img.dims.order[1:], M=tile) #TODO better strategy to exclude dimension to split
