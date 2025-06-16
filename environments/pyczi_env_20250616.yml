@@ -86,6 +86,7 @@ dependencies:
     - bioio-czi==2.1.0
     - jupyterlab==4.4.3
     - matplotlib==3.10.3
+    - multiview-stitcher==0.1.27
     - pylibCZIrw==5.0.0
     - tqdm==4.67.1
     - vizarr==0.1.1
