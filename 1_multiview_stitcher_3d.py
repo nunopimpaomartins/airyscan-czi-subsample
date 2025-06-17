@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 import argparse
 from tqdm import tqdm
@@ -23,14 +24,15 @@ parser.add_argument("--dataPath", help="The path to your data")
 parser.add_argument("--extension", help="The extension of the files to be processed", default='.czi')
 
 args = parser.parse_args()
-print(args.dataPath)
+print('Processing folder: ', args.dataPath)
 
 if args.dataPath is None:
     print("Please provide a data path")
     exit(1)
 
 basedir = Path(args.dataPath)
-if args.extension is '.czi':
+
+if args.extension == '.czi':
     from bioio import BioImage
     import bioio_czi
 else:
@@ -42,7 +44,25 @@ def get_unique_names(array, substring='.'):
     """
     unique_names = [f[:f.index(substring)] for f in array]
     unique_names = list(set(unique_names))
-    return unique_names.sort()
+    unique_names.sort()
+    return unique_names
+
+def get_filename_from_tile_and_channel(data_path, tile):
+    """
+    This convenience function returns the filename given the tile and channel.
+    """
+    return data_path / f'{tile}'
+
+def get_tile_grid_position_from_tile_index(tile_index, z_planes=2):
+    """
+    Function to get the grid position of a tile based on its index.
+    Based on original work from https://github.com/multiview-stitcher/multiview-stitcher
+    """
+    return {
+        'z': tile_index % z_planes,
+        'y': 1,
+        'x': 1
+    }
 
 def main(datapath='.', extension='.czi'):
     filelist = os.listdir(datapath)
@@ -75,7 +95,173 @@ def main(datapath='.', extension='.czi'):
                     substack_file_indexes.append(filelist.index(file))
             substack_file_indexes.sort()
 
-            print('\n '.join([filelist[i] for i in substack_file_indexes]))
+            print('\n '.join([filelist[i] for i in substack_file_indexes])) #TODO remove this
+            print('Tile grid indices:')
+            print("\n".join([f"Tile {itile}: " + str(get_tile_grid_position_from_tile_index(itile, n_substacks))for itile, tile in enumerate(substack_file_indexes)]))
+
+            filelist_tiles = [filelist[i] for i in substack_file_indexes]
+
+            # Getting image data voxel scales
+            file_path = str(datapath / filelist_tiles[0])
+            img = BioImage(
+                file_path,
+                reader=bioio_czi.Reader,
+                reconstruct_mosaic=False,
+                include_subblock_metadata=True,
+                use_aicspylibczi=True
+            )
+            scale = {'z': img.scale.Z, 'y': img.scale.Y, 'x': img.scale.X}
+            print('Voxel scales:', scale)
+
+            overlap = {
+                # 'x': 0.1,
+                # 'y': 0.1,
+                'z': 0.1
+            }
+            tile_shape = {
+                'z': img.dims.Z,
+                'y': img.dims.Y,
+                'x': img.dims.X
+            }
+            print('Tile shape:', tile_shape)
+
+            translations = []
+            for itile, tile in enumerate(substack_file_indexes):
+                tile_grid_position = get_tile_grid_position_from_tile_index(itile)
+                translations.append(
+                    {
+                        dim: tile_grid_position[dim] * (1 - (overlap[dim] if dim in overlap else 1)) * tile_shape[dim] * scale[dim]
+                        for dim in scale
+                    }
+                )
+
+            print("Tile positions:")
+            print("\n".join([f"Tile {itile}: " + str(t) for itile, t in enumerate(translations)]))
+
+            # Read input tiles and convert to OME-Zarr files, then delete temporary files
+            overwrite = True
+
+            # remove spaces from filename
+            filelist_savenames = [f[:f.index(extension)].replace(' ', '_') + '.zarr' for f in filelist_tiles]
+            print('\n '.join([i for i in filelist_savenames])) #TODO remove this
+            # print('====================') #TODO remove this
+            # continue
+
+            msims = []
+            zarr_paths = []
+            for itile, tile in tqdm(enumerate(filelist_tiles)):
+
+                # where to save the zarr(s)
+                zarr_path = os.path.join(os.path.dirname(get_filename_from_tile_and_channel(datapath, tile)), filelist_savenames[itile])
+
+                # read tile image
+                if os.path.exists(zarr_path) and not overwrite:
+                    im_data = da.from_zarr(os.path.join(zarr_path, '0'))[0] # drop t axis automatically added
+                else:
+                    file_path = str(datapath / tile)
+                    img = BioImage(
+                        file_path, 
+                        reader=bioio_czi.Reader, 
+                        reconstruct_mosaic=False,
+                        include_subblock_metadata=True,
+                        use_aicspylibczi=True,
+                    )
+                    im_data = img.get_image_data(img.dims.order[img.dims.order.index('T')+1:]) # get the dimenions of data without T axis
+
+                sim = si_utils.get_sim_from_array(
+                    im_data,
+                    dims=["c", "z", "y", "x"],
+                    scale=scale,
+                    translation=translations[itile],
+                    transform_key=io.METADATA_TRANSFORM_KEY,
+                    )
+
+                # write to OME-Zarr
+                ngff_utils.write_sim_to_ome_zarr(sim, zarr_path, overwrite=overwrite)
+                # replace sim with the sim read from the written OME-Zarr
+                sim = ngff_utils.read_sim_from_ome_zarr(zarr_path)
+
+                # alternatively `write_sim_to_ome_zarr` returns a sim loaded from the written OME-Zarr
+                # sim = ngff_utils.write_sim_to_ome_zarr(sim, zarr_path, overwrite=overwrite)
+
+                msim = msi_utils.get_msim_from_sim(sim)
+                zarr_paths.append(zarr_path)
+
+                msims.append(msim)
+
+
+            # Do channel alignment if needed
+            perform_channel_alignment = False
+
+            # Channel alignment is performed using a single tile.
+            # Choose here which tile (index) to use.
+            channel_alignment_tile_index = 0
+
+            curr_transform_key = 'affine_metadata'
+            if perform_channel_alignment:
+                curr_transform_key = 'affine_metadata_ch_reg'
+
+                channels = msims[channel_alignment_tile_index]['scale0/image'].coords['c']
+
+                # select chosen tiles for registration
+                msims_ch_reg = [msi_utils.multiscale_sel_coords(msims[5], {'c': ch})
+                                for ch in channels]
+
+                with dask.diagnostics.ProgressBar():
+                    params_c = registration.register(
+                        msims_ch_reg,
+                        registration_binning={'z': 2, 'y': 4, 'x': 4},
+                        reg_channel_index=0,
+                        transform_key='affine_metadata',
+                        pre_registration_pruning_method=None,
+                    )
+
+                # assign channel coordinates to obtained parameters
+                params_c = xr.concat(params_c, dim='c').assign_coords({'c': channels})
+
+                # set obtained parameters for all tiles
+                for msim in msims:
+                    msi_utils.set_affine_transform(
+                        msim, params_c, transform_key=curr_transform_key, base_transform_key='affine_metadata')
+            
+            # do registration
+            with dask.diagnostics.ProgressBar():
+                params = registration.register(
+                    msims,
+                    registration_binning={'z': 1, 'y': 3, 'x': 3},
+                    reg_channel_index=0,
+                    transform_key=curr_transform_key,
+                    new_transform_key='affine_registered',
+                    pre_registration_pruning_method="keep_axis_aligned",
+                )
+            
+            # print obtained registration parameters
+            for imsim, msim in enumerate(msims):
+                affine = np.array(msi_utils.get_transform_from_msim(msim, transform_key='affine_registered')[0])
+                print(f'tile index {imsim}\n', affine)
+            
+            output_filename = os.path.join(savedir, filelist_savenames[0][:filelist_savenames[0].index('_sub')] + '_tile'+ str(i + 1).zfill(2) + '.zarr')
+
+            fused = fusion.fuse(
+                [msi_utils.get_sim_from_msim(msim) for msim in msims],
+                transform_key='affine_registered',
+                output_chunksize=256,
+                )
+
+            print(f'Fusing views and saving output to {output_filename}...')
+            with dask.diagnostics.ProgressBar():
+                fused = ngff_utils.write_sim_to_ome_zarr(
+                    fused, output_filename, overwrite=True
+                )
+            
+            print('Removing temporary files...')
+            for itile, tile in tqdm(enumerate(filelist_tiles)):
+                zarr_path = os.path.join(os.path.dirname(get_filename_from_tile_and_channel(datapath, tile)), filelist_savenames[itile])
+                if os.path.exists(zarr_path):
+                    shutil.rmtree(zarr_path)
+            
+            print('====================')
 
 
 main(datapath=basedir, extension=args.extension)
+print('Done!')
