@@ -2,6 +2,7 @@ import os
 import shutil
 from pathlib import Path
 import argparse
+import dask.config
 from tqdm import tqdm
 
 import xarray as xr
@@ -18,6 +19,8 @@ from multiview_stitcher import (
     param_utils,
     registration
 )
+
+# dask.config.set(scheduler='threads' , num_workers=8, pool='processes')
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--dataPath", help="The path to your data")
@@ -64,6 +67,66 @@ def get_tile_grid_position_from_tile_index(tile_index, z_planes=2):
         'x': 1
     }
 
+def tile_registration(data_array):
+    """
+    Wrapping function for tile stitching and registration. 
+    """
+    # Do channel alignment if needed
+    perform_channel_alignment = False
+
+    # Channel alignment is performed using a single tile.
+    # Choose here which tile (index) to use.
+    channel_alignment_tile_index = 0
+
+    curr_transform_key = 'affine_metadata'
+    if perform_channel_alignment:
+        curr_transform_key = 'affine_metadata_ch_reg'
+
+        channels = data_array[channel_alignment_tile_index]['scale0/image'].coords['c']
+
+        # select chosen tiles for registration
+        msims_ch_reg = [msi_utils.multiscale_sel_coords(data_array[5], {'c': ch})
+                        for ch in channels]
+
+        with dask.diagnostics.ProgressBar():
+            params_c = registration.register(
+                msims_ch_reg,
+                registration_binning={'z': 2, 'y': 4, 'x': 4},
+                reg_channel_index=0,
+                transform_key='affine_metadata',
+                pre_registration_pruning_method=None,
+            )
+
+        # assign channel coordinates to obtained parameters
+        params_c = xr.concat(params_c, dim='c').assign_coords({'c': channels})
+
+        # set obtained parameters for all tiles
+        for msim in data_array:
+            msi_utils.set_affine_transform(
+                msim, params_c, transform_key=curr_transform_key, base_transform_key='affine_metadata')
+    
+    # do registration
+    print('Performing registration...')
+    # with dask.diagnostics.ProgressBar():
+    params = registration.register(
+        data_array,
+        registration_binning={'z': 1, 'y': 3, 'x': 3},
+        reg_channel_index=0,
+        transform_key=curr_transform_key,
+        new_transform_key='affine_registered',
+        pre_registration_pruning_method="keep_axis_aligned",
+        # scheduler='single-threaded',
+        # n_parallel_pairwise_regs=1,
+    )
+    
+    # print obtained registration parameters
+    for imsim, msim in enumerate(data_array):
+        affine = np.array(msi_utils.get_transform_from_msim(msim, transform_key='affine_registered')[0])
+        print(f'tile index {imsim}\n', affine)
+    
+    return params, affine
+
+
 def main(datapath='.', extension='.czi'):
     filelist = os.listdir(datapath)
 
@@ -95,11 +158,10 @@ def main(datapath='.', extension='.czi'):
                     substack_file_indexes.append(filelist.index(file))
             substack_file_indexes.sort()
 
-            print('\n '.join([filelist[i] for i in substack_file_indexes])) #TODO remove this
+            filelist_tiles = [filelist[i] for i in substack_file_indexes]
+            print('\n '.join([x for x in filelist_tiles])) #TODO remove this
             print('Tile grid indices:')
             print("\n".join([f"Tile {itile}: " + str(get_tile_grid_position_from_tile_index(itile, n_substacks))for itile, tile in enumerate(substack_file_indexes)]))
-
-            filelist_tiles = [filelist[i] for i in substack_file_indexes]
 
             # Getting image data voxel scales
             file_path = str(datapath / filelist_tiles[0])
@@ -143,7 +205,7 @@ def main(datapath='.', extension='.czi'):
 
             # remove spaces from filename
             filelist_savenames = [f[:f.index(extension)].replace(' ', '_') + '.zarr' for f in filelist_tiles]
-            print('\n '.join([i for i in filelist_savenames])) #TODO remove this
+            print('\n'.join([i for i in filelist_savenames])) #TODO remove this
             # print('====================') #TODO remove this
             # continue
 
@@ -189,59 +251,13 @@ def main(datapath='.', extension='.czi'):
 
                 msims.append(msim)
 
-
-            # Do channel alignment if needed
-            perform_channel_alignment = False
-
-            # Channel alignment is performed using a single tile.
-            # Choose here which tile (index) to use.
-            channel_alignment_tile_index = 0
-
-            curr_transform_key = 'affine_metadata'
-            if perform_channel_alignment:
-                curr_transform_key = 'affine_metadata_ch_reg'
-
-                channels = msims[channel_alignment_tile_index]['scale0/image'].coords['c']
-
-                # select chosen tiles for registration
-                msims_ch_reg = [msi_utils.multiscale_sel_coords(msims[5], {'c': ch})
-                                for ch in channels]
-
-                with dask.diagnostics.ProgressBar():
-                    params_c = registration.register(
-                        msims_ch_reg,
-                        registration_binning={'z': 2, 'y': 4, 'x': 4},
-                        reg_channel_index=0,
-                        transform_key='affine_metadata',
-                        pre_registration_pruning_method=None,
-                    )
-
-                # assign channel coordinates to obtained parameters
-                params_c = xr.concat(params_c, dim='c').assign_coords({'c': channels})
-
-                # set obtained parameters for all tiles
-                for msim in msims:
-                    msi_utils.set_affine_transform(
-                        msim, params_c, transform_key=curr_transform_key, base_transform_key='affine_metadata')
+            params, affine = tile_registration(msims)
             
-            # do registration
-            with dask.diagnostics.ProgressBar():
-                params = registration.register(
-                    msims,
-                    registration_binning={'z': 1, 'y': 3, 'x': 3},
-                    reg_channel_index=0,
-                    transform_key=curr_transform_key,
-                    new_transform_key='affine_registered',
-                    pre_registration_pruning_method="keep_axis_aligned",
-                )
-            
-            # print obtained registration parameters
-            for imsim, msim in enumerate(msims):
-                affine = np.array(msi_utils.get_transform_from_msim(msim, transform_key='affine_registered')[0])
-                print(f'tile index {imsim}\n', affine)
-            
-            output_filename = os.path.join(savedir, filelist_savenames[0][:filelist_savenames[0].index('_sub')] + '_tile'+ str(i + 1).zfill(2) + '.zarr')
+            save_name = filelist_savenames[0][:filelist_savenames[0].index('_sub')] + '_tile'+ str(i + 1).zfill(2) + '.zarr'
+            print(f'Save name: {save_name}')
+            output_filename = os.path.join(savedir, save_name)
 
+            print('Fusing views...')
             fused = fusion.fuse(
                 [msi_utils.get_sim_from_msim(msim) for msim in msims],
                 transform_key='affine_registered',
@@ -263,5 +279,8 @@ def main(datapath='.', extension='.czi'):
             print('====================')
 
 
-main(datapath=basedir, extension=args.extension)
+if __name__ == '__main__':
+    main(datapath=basedir, extension=args.extension)
+
+# main(datapath=basedir, extension=args.extension)
 print('Done!')
