@@ -65,7 +65,7 @@ def main(datapath='.', extension='.czi'):
                 filelist_filtered.append(name)
 
         filelist_substacks = get_unique_names(filelist_filtered, substring='-Scene')
-        n_positions = len(filelist_filtered) / len(filelist_substacks)
+        n_positions = int(len(filelist_filtered) / len(filelist_substacks))
         n_substacks = len(filelist_substacks)
 
         for i in range(n_positions):
@@ -73,9 +73,9 @@ def main(datapath='.', extension='.czi'):
             for file in filelist:
                 if file.find(original_name) >= 0 and file.endswith('_tile' + str(i + 1).zfill(2) + extension):
                     substack_file_indexes.append(filelist.index(file))
+            substack_file_indexes.sort()
 
-            
-
+            print('\n '.join([filelist[i] for i in substack_file_indexes]))
 
 
 main(datapath=basedir, extension=args.extension)
