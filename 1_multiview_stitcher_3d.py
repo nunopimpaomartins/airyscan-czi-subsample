@@ -27,7 +27,6 @@ parser.add_argument("--dataPath", help="The path to your data")
 parser.add_argument("--extension", help="The extension of the files to be processed", default='.czi')
 
 args = parser.parse_args()
-print('Processing folder: ', args.dataPath)
 
 if args.dataPath is None:
     print("Please provide a data path")
@@ -107,17 +106,17 @@ def tile_registration(data_array):
     
     # do registration
     print('Performing registration...')
-    # with dask.diagnostics.ProgressBar():
-    params = registration.register(
-        data_array,
-        registration_binning={'z': 1, 'y': 3, 'x': 3},
-        reg_channel_index=0,
-        transform_key=curr_transform_key,
-        new_transform_key='affine_registered',
-        pre_registration_pruning_method="keep_axis_aligned",
-        # scheduler='single-threaded',
-        # n_parallel_pairwise_regs=1,
-    )
+    with dask.diagnostics.ProgressBar():
+        params = registration.register(
+            data_array,
+            registration_binning={'z': 1, 'y': 3, 'x': 3},
+            reg_channel_index=0,
+            transform_key=curr_transform_key,
+            new_transform_key='affine_registered',
+            pre_registration_pruning_method="keep_axis_aligned",
+            # scheduler='single-threaded',
+            # n_parallel_pairwise_regs=1,
+        )
     
     # print obtained registration parameters
     for imsim, msim in enumerate(data_array):
@@ -128,6 +127,7 @@ def tile_registration(data_array):
 
 
 def main(datapath='.', extension='.czi'):
+    print('Processing folder: ', datapath)
     filelist = os.listdir(datapath)
 
     filelist = [f for f in filelist if f.endswith(extension)]
@@ -277,10 +277,10 @@ def main(datapath='.', extension='.czi'):
                     shutil.rmtree(zarr_path)
             
             print('====================')
+    print('Done!')
 
 
 if __name__ == '__main__':
     main(datapath=basedir, extension=args.extension)
 
 # main(datapath=basedir, extension=args.extension)
-print('Done!')
