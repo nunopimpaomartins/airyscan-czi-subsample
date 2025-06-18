@@ -14,13 +14,9 @@ from multiview_stitcher import (
     fusion,
     io,
     msi_utils,
-    vis_utils,
     ngff_utils,
-    param_utils,
     registration
 )
-
-# dask.config.set(scheduler='threads' , num_workers=8, pool='processes')
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--dataPath", help="The path to your data")
@@ -114,8 +110,6 @@ def tile_registration(data_array):
             transform_key=curr_transform_key,
             new_transform_key='affine_registered',
             pre_registration_pruning_method="keep_axis_aligned",
-            # scheduler='single-threaded',
-            # n_parallel_pairwise_regs=1,
         )
     
     # print obtained registration parameters
@@ -200,20 +194,19 @@ def main(datapath='.', extension='.czi'):
             print("Tile positions:")
             print("\n".join([f"Tile {itile}: " + str(t) for itile, t in enumerate(translations)]))
 
-            # Read input tiles and convert to OME-Zarr files, then delete temporary files
+            # Read input tiles, convert to OME-Zarr files, then delete temporary files
             overwrite = True
 
             # remove spaces from filename
             filelist_savenames = [f[:f.index(extension)].replace(' ', '_') + '.zarr' for f in filelist_tiles]
-            print('\n'.join([i for i in filelist_savenames])) #TODO remove this
-            # print('====================') #TODO remove this
-            # continue
+            print('Saving OME-Zarr files with names:')
+            print('\n'.join([i for i in filelist_savenames]))
 
             msims = []
             zarr_paths = []
-            for itile, tile in tqdm(enumerate(filelist_tiles)):
+            for itile, tile in enumerate(tqdm(filelist_tiles)):
 
-                # where to save the zarr(s)
+                # set save path for OME-Zarr files
                 zarr_path = os.path.join(os.path.dirname(get_filename_from_tile_and_channel(datapath, tile)), filelist_savenames[itile])
 
                 # read tile image
@@ -228,7 +221,8 @@ def main(datapath='.', extension='.czi'):
                         include_subblock_metadata=True,
                         use_aicspylibczi=True,
                     )
-                    im_data = img.get_image_data(img.dims.order[img.dims.order.index('T')+1:]) # get the dimenions of data without T axis
+                    # get data dimensions without T axis from metadata
+                    im_data = img.get_image_data(img.dims.order[img.dims.order.index('T')+1:])
 
                 sim = si_utils.get_sim_from_array(
                     im_data,
@@ -242,9 +236,6 @@ def main(datapath='.', extension='.czi'):
                 ngff_utils.write_sim_to_ome_zarr(sim, zarr_path, overwrite=overwrite)
                 # replace sim with the sim read from the written OME-Zarr
                 sim = ngff_utils.read_sim_from_ome_zarr(zarr_path)
-
-                # alternatively `write_sim_to_ome_zarr` returns a sim loaded from the written OME-Zarr
-                # sim = ngff_utils.write_sim_to_ome_zarr(sim, zarr_path, overwrite=overwrite)
 
                 msim = msi_utils.get_msim_from_sim(sim)
                 zarr_paths.append(zarr_path)
@@ -271,7 +262,7 @@ def main(datapath='.', extension='.czi'):
                 )
             
             print('Removing temporary files...')
-            for itile, tile in tqdm(enumerate(filelist_tiles)):
+            for itile, tile in enumerate(tqdm(filelist_tiles)):
                 zarr_path = os.path.join(os.path.dirname(get_filename_from_tile_and_channel(datapath, tile)), filelist_savenames[itile])
                 if os.path.exists(zarr_path):
                     shutil.rmtree(zarr_path)
@@ -282,5 +273,3 @@ def main(datapath='.', extension='.czi'):
 
 if __name__ == '__main__':
     main(datapath=basedir, extension=args.extension)
-
-# main(datapath=basedir, extension=args.extension)
