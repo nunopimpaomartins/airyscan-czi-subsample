@@ -128,7 +128,7 @@ def main(datapath='.', extension='.czi'):
     filelist.sort()
     print('Nr of czi files in dir:', len(filelist))
 
-    savedir = Path(str(basedir) + '/stitched_tile_3d/')
+    savedir = Path(str(datapath) + '/stitched_tile_3d/')
     savedir.mkdir(parents=True, exist_ok=True)
     print('Saving output to:', savedir)
 
@@ -147,9 +147,14 @@ def main(datapath='.', extension='.czi'):
 
         for i in range(n_positions):
             substack_file_indexes = []
-            for file in filelist:
-                if file.find(original_name) >= 0 and file.endswith('_tile' + str(i + 1).zfill(2) + extension):
-                    substack_file_indexes.append(filelist.index(file))
+            if Path(datapath).stem == 'split_czi':
+                for file in filelist:
+                    if file.find(original_name) >= 0 and file.endswith('_tile' + str(i + 1).zfill(2) + extension):
+                        substack_file_indexes.append(filelist.index(file))
+            else:
+                for file in filelist:
+                    if file.find(original_name) >= 0 and file.endswith(extension):
+                        substack_file_indexes.append(filelist.index(file))
             substack_file_indexes.sort()
 
             filelist_tiles = [filelist[i] for i in substack_file_indexes]
