@@ -134,25 +134,25 @@ def tile_registration(data_array):
     # print obtained registration parameters
     for imsim, msim in enumerate(data_array):
         affine = np.array(msi_utils.get_transform_from_msim(msim, transform_key='affine_registered')[0])
-        mainlogger.info(f'tile index {imsim}\n', affine)
+        mainlogger.info('tile index %s \n %s' % (imsim, affine))
     
     return params, affine
 
 
 def main(datapath='.', extension='.czi'):
-    mainlogger.info('Processing folder: %s', datapath)
+    mainlogger.info('Processing folder: %s' % datapath)
     filelist = os.listdir(datapath)
 
     filelist = [f for f in filelist if f.endswith(extension)]
     filelist.sort()
-    mainlogger.info('Nr of czi files in dir: %i', len(filelist))
+    mainlogger.info('Nr of czi files in dir: %i' % len(filelist))
 
     savedir = Path(str(datapath) + '/stitched_tile_3d/')
     savedir.mkdir(parents=True, exist_ok=True)
-    mainlogger.info('Saving output to: %s', savedir)
+    mainlogger.info('Saving output to: %s' % savedir)
 
     original_filenames = get_unique_names(filelist, substring='_sub')
-    mainlogger.info("Nb of unique file names: %i", len(original_filenames))
+    mainlogger.info("Nb of unique file names: %i" % len(original_filenames))
 
     for original_name in original_filenames:
         filelist_filtered = []
@@ -191,7 +191,7 @@ def main(datapath='.', extension='.czi'):
                 use_aicspylibczi=True
             )
             scale = {'z': img.scale.Z, 'y': img.scale.Y, 'x': img.scale.X}
-            mainlogger.info('Voxel scales: %s', scale)
+            mainlogger.info('Voxel scales: %s' % scale)
 
             overlap = {
                 # 'x': 0.1,
@@ -203,7 +203,7 @@ def main(datapath='.', extension='.czi'):
                 'y': img.dims.Y,
                 'x': img.dims.X
             }
-            mainlogger.info('Tile shape: %s', tile_shape)
+            mainlogger.info('Tile shape: %s' % tile_shape)
 
             translations = []
             for itile, tile in enumerate(substack_file_indexes):
@@ -269,7 +269,7 @@ def main(datapath='.', extension='.czi'):
             params, affine = tile_registration(msims)
             
             save_name = filelist_savenames[0][:filelist_savenames[0].index('_sub')] + '_tile'+ str(i + 1).zfill(2) + '.zarr'
-            mainlogger.info('Save name: %s', save_name)
+            mainlogger.info('Save name: %s' % save_name)
             output_filename = os.path.join(savedir, save_name)
 
             mainlogger.info('Fusing views...')
