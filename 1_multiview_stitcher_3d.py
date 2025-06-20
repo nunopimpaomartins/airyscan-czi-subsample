@@ -70,15 +70,15 @@ def get_filename_from_tile_and_channel(data_path, tile):
     """
     return data_path / f'{tile}'
 
-def get_tile_grid_position_from_tile_index(tile_index, z_planes=2):
+def get_tile_grid_position_from_tile_index(tile_index, z_planes):
     """
     Function to get the grid position of a tile based on its index.
     Based on original work from https://github.com/multiview-stitcher/multiview-stitcher
     """
     return {
         'z': tile_index % z_planes,
-        'y': 1,
-        'x': 1
+        'y': 0,
+        'x': 0
     }
 
 def tile_registration(data_array):
@@ -217,7 +217,7 @@ def main(datapath='.', extension='.czi'):
 
             translations = []
             for itile, tile in enumerate(substack_file_indexes):
-                tile_grid_position = get_tile_grid_position_from_tile_index(itile)
+                tile_grid_position = get_tile_grid_position_from_tile_index(itile, n_substacks)
                 translations.append(
                     {
                         dim: tile_grid_position[dim] * (1 - (overlap[dim] if dim in overlap else 1)) * tile_shape[dim] * scale[dim]
