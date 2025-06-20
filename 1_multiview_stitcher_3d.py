@@ -132,7 +132,7 @@ def main(datapath='.', extension='.czi'):
     savedir.mkdir(parents=True, exist_ok=True)
     print('Saving output to:', savedir)
 
-    original_filenames = get_unique_names(filelist, substring='_sub')
+    original_filenames = get_unique_names(filelist, substring='_Sub')
     print("Nb of unique file names:", len(original_filenames))
 
     for original_name in original_filenames:
@@ -249,7 +249,7 @@ def main(datapath='.', extension='.czi'):
 
             params, affine = tile_registration(msims)
             
-            save_name = filelist_savenames[0][:filelist_savenames[0].index('_sub')] + '_tile'+ str(i + 1).zfill(2) + '.zarr'
+            save_name = filelist_savenames[0][:filelist_savenames[0].index('_Sub')] + '_tile'+ str(i + 1).zfill(2) + '.zarr'
             print(f'Save name: {save_name}')
             output_filename = os.path.join(savedir, save_name)
 
