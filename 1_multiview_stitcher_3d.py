@@ -2,7 +2,6 @@ import os
 import shutil
 from pathlib import Path
 import argparse
-import logging 
 from tqdm import tqdm
 
 import dask.config
@@ -38,30 +37,17 @@ if args.extension == '.czi':
 else:
     from tifffile import imread
 
-# set the logger configuration to output messages to console and log file
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    filename=str(basedir / 'multiview_stitcher_3d.log'),
-    filemode='w'
-)
-
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
-console.setFormatter(formatter)
-logging.getLogger('').addHandler(console)
-
-mainlogger = logging.getLogger('multiview_stitcher_3d')
 
 def get_unique_names(array, substring='.'):
     """
     Get unique names from a string array
     """
-    unique_names = [f[:f.index(substring)] for f in array]
-    unique_names = list(set(unique_names))
-    unique_names.sort()
+    try:
+        unique_names = [f[:f.index(substring)] for f in array]
+        unique_names = list(set(unique_names))
+        unique_names.sort()
+    except:
+        unique_names = []
     return unique_names
 
 def get_filename_from_tile_and_channel(data_path, tile):
@@ -134,25 +120,27 @@ def tile_registration(data_array):
     # print obtained registration parameters
     for imsim, msim in enumerate(data_array):
         affine = np.array(msi_utils.get_transform_from_msim(msim, transform_key='affine_registered')[0])
-        mainlogger.info('tile index %s \n %s' % (imsim, affine))
+        print('tile index %s \n %s' % (imsim, affine))
     
     return params, affine
 
 
 def main(datapath='.', extension='.czi'):
-    mainlogger.info('Processing folder: %s' % datapath)
+    print('Processing folder: %s' % datapath)
     filelist = os.listdir(datapath)
 
     filelist = [f for f in filelist if f.endswith(extension)]
     filelist.sort()
-    mainlogger.info('Nr of czi files in dir: %i' % len(filelist))
+    print('Nr of czi files in dir: %i' % len(filelist))
 
     savedir = Path(str(datapath) + '/stitched_tile_3d/')
     savedir.mkdir(parents=True, exist_ok=True)
-    mainlogger.info('Saving output to: %s' % savedir)
+    print('Saving output to: %s' % savedir)
 
     original_filenames = get_unique_names(filelist, substring='_sub')
-    mainlogger.info("Nb of unique file names: %i" % len(original_filenames))
+    if len(original_filenames) == 0:
+        original_filenames = get_unique_names(filelist, substring='_Sub')
+    print("Nb of unique file names: %i" % len(original_filenames))
 
     for original_name in original_filenames:
         filelist_filtered = []
@@ -177,9 +165,9 @@ def main(datapath='.', extension='.czi'):
             substack_file_indexes.sort()
 
             filelist_tiles = [filelist[i] for i in substack_file_indexes]
-            mainlogger.info('\n '.join([x for x in filelist_tiles]))
-            mainlogger.info('Tile grid indices:')
-            mainlogger.info("\n".join([f"Tile {itile}: " + str(get_tile_grid_position_from_tile_index(itile, n_substacks))for itile, tile in enumerate(substack_file_indexes)]))
+            print('\n '.join([x for x in filelist_tiles]))
+            print('Tile grid indices:')
+            print("\n".join([f"Tile {itile}: " + str(get_tile_grid_position_from_tile_index(itile, n_substacks))for itile, tile in enumerate(substack_file_indexes)]))
 
             # Getting image data voxel scales
             file_path = str(datapath / filelist_tiles[0])
@@ -191,7 +179,7 @@ def main(datapath='.', extension='.czi'):
                 use_aicspylibczi=True
             )
             scale = {'z': img.scale.Z, 'y': img.scale.Y, 'x': img.scale.X}
-            mainlogger.info('Voxel scales: %s' % scale)
+            print('Voxel scales: %s' % scale)
 
             overlap = {
                 # 'x': 0.1,
@@ -203,7 +191,7 @@ def main(datapath='.', extension='.czi'):
                 'y': img.dims.Y,
                 'x': img.dims.X
             }
-            mainlogger.info('Tile shape: %s' % tile_shape)
+            print('Tile shape: %s' % tile_shape)
 
             translations = []
             for itile, tile in enumerate(substack_file_indexes):
@@ -215,16 +203,16 @@ def main(datapath='.', extension='.czi'):
                     }
                 )
 
-            mainlogger.info("Tile positions:")
-            mainlogger.info("\n".join([f"Tile {itile}: " + str(t) for itile, t in enumerate(translations)]))
+            print("Tile positions:")
+            print("\n".join([f"Tile {itile}: " + str(t) for itile, t in enumerate(translations)]))
 
             # Read input tiles, convert to OME-Zarr files, then delete temporary files
             overwrite = True
 
             # remove spaces from filename
             filelist_savenames = [f[:f.index(extension)].replace(' ', '_') + '.zarr' for f in filelist_tiles]
-            mainlogger.info('Saving OME-Zarr files with names:')
-            mainlogger.info('\n'.join([i for i in filelist_savenames]))
+            print('Saving OME-Zarr files with names:')
+            print('\n'.join([i for i in filelist_savenames]))
 
             msims = []
             zarr_paths = []
@@ -268,31 +256,35 @@ def main(datapath='.', extension='.czi'):
 
             params, affine = tile_registration(msims)
             
-            save_name = filelist_savenames[0][:filelist_savenames[0].index('_sub')] + '_tile'+ str(i + 1).zfill(2) + '.zarr'
-            mainlogger.info('Save name: %s' % save_name)
+            try:
+                save_name = filelist_savenames[0][:filelist_savenames[0].index('_sub')] + '_tile'+ str(i + 1).zfill(2) + '.zarr'
+            except:
+                save_name = filelist_savenames[0][:filelist_savenames[0].index('_Sub')] + '_tile'+ str(i + 1).zfill(2) + '.zarr'
+            
+            print('Save name: %s' % save_name)
             output_filename = os.path.join(savedir, save_name)
 
-            mainlogger.info('Fusing views...')
+            print('Fusing views...')
             fused = fusion.fuse(
                 [msi_utils.get_sim_from_msim(msim) for msim in msims],
                 transform_key='affine_registered',
                 output_chunksize=256,
                 )
 
-            mainlogger.info('Fusing views and saving output to %s...', output_filename)
+            print('Fusing views and saving output to %s...', output_filename)
             with dask.diagnostics.ProgressBar():
                 fused = ngff_utils.write_sim_to_ome_zarr(
                     fused, output_filename, overwrite=True
                 )
             
-            mainlogger.info('Removing temporary files...')
+            print('Removing temporary files...')
             for itile, tile in enumerate(tqdm(filelist_tiles)):
                 zarr_path = os.path.join(os.path.dirname(get_filename_from_tile_and_channel(datapath, tile)), filelist_savenames[itile])
                 if os.path.exists(zarr_path):
                     shutil.rmtree(zarr_path)
             
-            mainlogger.info('====================')
-    mainlogger.info('Done!')
+            print('====================')
+    print('Done!')
 
 
 if __name__ == '__main__':
