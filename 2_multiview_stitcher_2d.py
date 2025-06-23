@@ -135,7 +135,7 @@ def main(datapath='.', extension='.czi'):
     filelist.sort()
     print('Nr of czi files in dir: %i' % len(filelist))
 
-    savedir = Path(str(datapath) + '/stitched_tile_2d/')
+    savedir = Path(str(datapath) + '/stitched_tiles_2d/')
     savedir.mkdir(parents=True, exist_ok=True)
     print('Saving output to: %s' % savedir)
 
@@ -149,6 +149,7 @@ def main(datapath='.', extension='.czi'):
                 filelist_filtered.append(name)
 
         n_tiles = int(len(filelist_filtered))
+        n_columns = n_tiles // 2
 
         tile_file_indexes = []
         for i in range(n_tiles):
@@ -160,7 +161,7 @@ def main(datapath='.', extension='.czi'):
         filelist_tiles = [filelist[i] for i in tile_file_indexes]
         print('\n '.join([x for x in filelist_tiles]))
         print('Tile grid indices:')
-        print("\n".join([f"Tile {itile}: " + str(get_tile_grid_position_from_tile_index(itile, n_tiles)) for itile, tile in enumerate(tile_file_indexes)]))
+        print("\n".join([f"Tile {itile}: " + str(get_tile_grid_position_from_tile_index(itile, n_columns)) for itile, tile in enumerate(tile_file_indexes)]))
 
         # Getting image data voxel scales
         file_path = str(datapath / filelist_tiles[0])
@@ -188,7 +189,7 @@ def main(datapath='.', extension='.czi'):
 
         translations = []
         for itile, tile in enumerate(tile_file_indexes):
-            tile_grid_position = get_tile_grid_position_from_tile_index(itile, n_tiles)
+            tile_grid_position = get_tile_grid_position_from_tile_index(itile, n_columns)
             translations.append(
                 {
                     dim: tile_grid_position[dim] * (1 - (overlap[dim] if dim in overlap else 1)) * tile_shape[dim] * scale[dim]
