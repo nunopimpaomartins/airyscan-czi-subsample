@@ -223,23 +223,25 @@ def main(datapath='.', extension='.czi'):
                 # get data dimensions without T axis from metadata
                 im_data = img.get_image_data(img.dims.order[img.dims.order.index('T')+1:])
 
-                sim = si_utils.get_sim_from_array(
-                    im_data,
-                    dims=["c", "z", "y", "x"],
-                    scale=scale,
-                    translation=translations[itile],
-                    transform_key=io.METADATA_TRANSFORM_KEY,
-                    )
-
-            # replace sim with the sim read from the written OME-Zarr
-            sim = ngff_utils.read_sim_from_ome_zarr(zarr_path)
+            sim = si_utils.get_sim_from_array(
+                im_data,
+                dims=["c", "z", "y", "x"],
+                scale=scale,
+                translation=translations[itile],
+                transform_key=io.METADATA_TRANSFORM_KEY,
+                )
 
             msim = msi_utils.get_msim_from_sim(sim)
             zarr_paths.append(zarr_path)
 
             msims.append(msim)
 
-        params, affine = tile_registration(msims)
+        try:
+            params, affine = tile_registration(msims)
+        except:
+            print('Tile registration failed. Skipping this tile set.')
+            print('====================')
+            continue
         
         save_name = filelist_tiles[0][:filelist_tiles[0].index('_tile')] + '.zarr'
         
