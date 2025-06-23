@@ -142,14 +142,13 @@ def main(datapath='.', extension='.czi'):
     original_filenames = get_unique_names(filelist, substring='_tile')
     print("Nb of unique file names: %i" % len(original_filenames))
 
-    for original_name in original_filenames:
+    for org_idx, original_name in enumerate(original_filenames):
         filelist_filtered = []
         for name in filelist:
             if name.find(original_name) >= 0:
                 filelist_filtered.append(name)
 
         n_tiles = int(len(filelist_filtered))
-        n_columns = n_tiles // 2
 
         tile_file_indexes = []
         for i in range(n_tiles):
