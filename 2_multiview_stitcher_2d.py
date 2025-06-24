@@ -19,6 +19,7 @@ from multiview_stitcher import (
     ngff_utils,
     registration
 )
+from pylibCZIrw import czi as pyczi # to get mosaic shape from czi file
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--dataPath", help="The path to your data")
@@ -68,6 +69,27 @@ def get_tile_grid_position_from_tile_index(tile_index, num_cols):
         'y': tile_index // num_cols,
         'x': tile_index % num_cols if (tile_index // num_cols) % 2 == 0 else num_cols - 1 - (tile_index % num_cols)
     }
+
+def get_mosaic_shape_from_parent_file(data_path, file_name):
+    """
+    Get Mosaic tile shape from parent czi file.
+    This function reads the metadata from the parent file and returns the shape of the mosaic.
+    """
+    parent_path = data_path.parent
+    parent_filelist = os.listdir(parent_path)
+    parent_filelist_filtered = [f for f in parent_filelist if f.endswith('.czi') and file_name in f]
+    if len(parent_filelist_filtered) == 0:
+        raise FileNotFoundError("No parent file found for %s in %s" % file_name, parent_path)
+    
+    parent_filelist_filtered.sort()
+    parent_file_path = parent_path / parent_filelist_filtered[0]
+    
+    with pyczi.open_czi(str(parent_file_path)) as czidoc:
+        md_dic = czidoc.metadata
+    
+    n_rows = int(md_dic['ImageDocument']['Metadata']['Experiment']['ExperimentBlocks']['AcquisitionBlock'][0]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Rows'])
+    n_cols = int(md_dic['ImageDocument']['Metadata']['Experiment']['ExperimentBlocks']['AcquisitionBlock'][0]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Columns'])
+    return n_rows, n_cols
 
 
 def tile_registration(data_array):
@@ -143,15 +165,18 @@ def main(datapath='.', extension='.czi'):
     original_filenames = get_unique_names(filelist, substring='_tile')
     print("Nb of unique file names: %i" % len(original_filenames))
 
-    for org_idx, original_name in enumerate(original_filenames):
+    for original_name in original_filenames:
         filelist_filtered = []
         for name in filelist:
             if name.find(original_name) >= 0:
                 filelist_filtered.append(name)
 
         n_tiles = int(len(filelist_filtered))
+        n_rows, n_columns = get_mosaic_shape_from_parent_file(datapath, original_name)
+        print('Number of tiles: %i' % n_tiles)
+        print('Mosaic shape: %i rows, %i columns' % (n_rows, n_columns))
 
-        tile_file_indexes = []
+        tile_file_indexes = [] # get tile file indexes from filelist
         for i in range(n_tiles):
             for file in filelist:
                 if file.find(original_name) >= 0 and file.endswith('_tile' + str(i + 1).zfill(2) + extension):
@@ -159,7 +184,7 @@ def main(datapath='.', extension='.czi'):
         tile_file_indexes.sort()
 
         filelist_tiles = [filelist[i] for i in tile_file_indexes]
-        print('\n '.join([x for x in filelist_tiles]))
+        print('\n '.join([f for f in filelist_tiles]))
         print('Tile grid indices:')
         print("\n".join([f"Tile {itile}: " + str(get_tile_grid_position_from_tile_index(itile, n_columns)) for itile, tile in enumerate(tile_file_indexes)]))
 
