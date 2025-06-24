@@ -83,12 +83,19 @@ def get_mosaic_shape_from_parent_file(data_path, file_name):
     
     parent_filelist_filtered.sort()
     parent_file_path = parent_path / parent_filelist_filtered[0]
+    print('Reading metadata from %s' % parent_filelist_filtered[0])
     
     with pyczi.open_czi(str(parent_file_path)) as czidoc:
         md_dic = czidoc.metadata
     
-    n_rows = int(md_dic['ImageDocument']['Metadata']['Experiment']['ExperimentBlocks']['AcquisitionBlock'][0]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Rows'])
-    n_cols = int(md_dic['ImageDocument']['Metadata']['Experiment']['ExperimentBlocks']['AcquisitionBlock'][0]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Columns'])
+    # getting the metadata block corresponding to this mosaic when there is multiple acquisition blocks
+    idx_start = parent_filelist_filtered[0].index('AcquisitionBlock')
+    offset = len('AcquisitionBlock')
+    idx_end = parent_filelist_filtered[0].index('_', idx_start + offset, len(parent_filelist_filtered[0]))
+    block_index = int(parent_filelist_filtered[0][idx_start + offset : idx_end]) - 1 # 0-based index
+
+    n_rows = int(md_dic['ImageDocument']['Metadata']['Experiment']['ExperimentBlocks']['AcquisitionBlock'][block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Rows'])
+    n_cols = int(md_dic['ImageDocument']['Metadata']['Experiment']['ExperimentBlocks']['AcquisitionBlock'][block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Columns'])
     return n_rows, n_cols
 
 
