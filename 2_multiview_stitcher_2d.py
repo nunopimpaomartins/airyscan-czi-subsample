@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 import argparse
 from tqdm import tqdm
@@ -237,19 +238,29 @@ def main(datapath='.', extension='.czi', metadata_substring='AcquisitionBlock'):
         print("Tile positions:")
         print("\n".join([f"Tile {itile}: " + str(t) for itile, t in enumerate(translations)]))
 
+        # Read input tiles, convert to OME-Zarr files, then delete temporary files
+        overwrite = True
+
+        filelist_savenames = []
+        if extension == '.czi':
+            filelist_savenames = [f[:f.index(extension)].replace(' ', '_') + '.zarr' for f in filelist_tiles]
+            print('Saving OME-Zarr files with names:')
+            print('\n'.join([i for i in filelist_savenames]))
+
         msims = []
         zarr_paths = []
         for itile, tile in enumerate(tqdm(filelist_tiles)):
 
             # set save path for OME-Zarr files
-            zarr_path = os.path.join(os.path.dirname(get_filename_from_tile_and_channel(datapath, tile)), filelist_tiles[itile])
+            if extension == '.czi':
+                zarr_path = os.path.join(os.path.dirname(get_filename_from_tile_and_channel(datapath, tile)), filelist_savenames[itile])
+            else:
+                zarr_path = os.path.join(os.path.dirname(get_filename_from_tile_and_channel(datapath, tile)), filelist_tiles[itile])
 
             # read tile image
             if os.path.exists(zarr_path):
                 im_data = da.from_zarr(os.path.join(zarr_path, '0'))[0] # drop t axis automatically added
             else:
-                from bioio import BioImage
-                import bioio_czi
                 file_path = str(datapath / tile)
                 img = BioImage(
                     file_path, 
@@ -268,6 +279,12 @@ def main(datapath='.', extension='.czi', metadata_substring='AcquisitionBlock'):
                 translation=translations[itile],
                 transform_key=io.METADATA_TRANSFORM_KEY,
                 )
+            
+            if extension == '.czi':
+                # write to OME-Zarr
+                ngff_utils.write_sim_to_ome_zarr(sim, zarr_path, overwrite=overwrite)
+                # replace sim with the sim read from the written OME-Zarr
+                sim = ngff_utils.read_sim_from_ome_zarr(zarr_path)
 
             msim = msi_utils.get_msim_from_sim(sim)
             zarr_paths.append(zarr_path)
@@ -298,6 +315,14 @@ def main(datapath='.', extension='.czi', metadata_substring='AcquisitionBlock'):
             fused = ngff_utils.write_sim_to_ome_zarr(
                 fused, output_filename, overwrite=True
             )
+        
+        print('Removing temporary files...')
+        if extension == '.czi':
+            for itile, tile in enumerate(tqdm(filelist_tiles)):
+                zarr_path = os.path.join(os.path.dirname(get_filename_from_tile_and_channel(datapath, tile)), filelist_savenames[itile])
+                if os.path.exists(zarr_path):
+                    shutil.rmtree(zarr_path)
+
         print('====================')
     print('Done!')
 
