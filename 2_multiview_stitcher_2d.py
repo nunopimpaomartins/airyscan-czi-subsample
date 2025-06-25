@@ -24,6 +24,7 @@ from pylibCZIrw import czi as pyczi # to get mosaic shape from czi file
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--dataPath", help="The path to your data")
 parser.add_argument("--extension", help="The extension of the files to be processed", default='.zarr')
+parser.add_argument("--metadataSubstring", type=str, help="The substring to use for metadata extraction", default='AcquisitionBlock')
 
 args = parser.parse_args()
 
@@ -70,7 +71,7 @@ def get_tile_grid_position_from_tile_index(tile_index, num_cols):
         'x': tile_index % num_cols if (tile_index // num_cols) % 2 == 0 else num_cols - 1 - (tile_index % num_cols)
     }
 
-def get_mosaic_shape_from_parent_file(data_path, file_name):
+def get_mosaic_shape_from_parent_file(data_path, file_name, name_substring):
     """
     Get Mosaic tile shape from parent czi file.
     This function reads the metadata from the parent file and returns the shape of the mosaic.
@@ -89,13 +90,17 @@ def get_mosaic_shape_from_parent_file(data_path, file_name):
         md_dic = czidoc.metadata
     
     # getting the metadata block corresponding to this mosaic when there is multiple acquisition blocks
-    idx_start = parent_filelist_filtered[0].index('AcquisitionBlock')
-    offset = len('AcquisitionBlock')
-    idx_end = parent_filelist_filtered[0].index('_', idx_start + offset, len(parent_filelist_filtered[0]))
-    block_index = int(parent_filelist_filtered[0][idx_start + offset : idx_end]) - 1 # 0-based index
-
-    n_rows = int(md_dic['ImageDocument']['Metadata']['Experiment']['ExperimentBlocks']['AcquisitionBlock'][block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Rows'])
-    n_cols = int(md_dic['ImageDocument']['Metadata']['Experiment']['ExperimentBlocks']['AcquisitionBlock'][block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Columns'])
+    md_block = md_dic['ImageDocument']['Metadata']['Experiment']['ExperimentBlocks']['AcquisitionBlock']
+    if name_substring != 'AcquisitionBlock':
+        n_rows = int(md_block['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Rows'])
+        n_cols = int(md_block['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Columns'])
+    else:
+        idx_start = parent_filelist_filtered[0].index(name_substring)
+        offset = len(name_substring)
+        idx_end = parent_filelist_filtered[0].index('_', idx_start + offset, len(parent_filelist_filtered[0]))
+        block_index = int(parent_filelist_filtered[0][idx_start + offset : idx_end]) - 1 # 0-based index
+        n_rows = int(md_block[block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Rows'])
+        n_cols = int(md_block[block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Columns'])
     return n_rows, n_cols
 
 
@@ -157,7 +162,7 @@ def tile_registration(data_array):
     return params, affine
 
 
-def main(datapath='.', extension='.czi'):
+def main(datapath='.', extension='.czi', metadata_substring='AcquisitionBlock'):
     print('Processing folder: %s' % datapath)
     filelist = os.listdir(datapath)
 
@@ -179,7 +184,7 @@ def main(datapath='.', extension='.czi'):
                 filelist_filtered.append(name)
 
         n_tiles = int(len(filelist_filtered))
-        n_rows, n_columns = get_mosaic_shape_from_parent_file(datapath, original_name)
+        n_rows, n_columns = get_mosaic_shape_from_parent_file(datapath, original_name, metadata_substring)
         print('Number of tiles: %i' % n_tiles)
         print('Mosaic shape: %i rows, %i columns' % (n_rows, n_columns))
 
@@ -298,4 +303,4 @@ def main(datapath='.', extension='.czi'):
 
 
 if __name__ == '__main__':
-    main(datapath=basedir, extension=args.extension)
+    main(datapath=basedir, extension=args.extension, metadata_substring=args.metadataSubstring)
