@@ -100,8 +100,20 @@ def get_mosaic_shape_from_parent_file(data_path, file_name, name_substring):
         offset = len(name_substring)
         idx_end = parent_filelist_filtered[0].index('_', idx_start + offset, len(parent_filelist_filtered[0]))
         block_index = int(parent_filelist_filtered[0][idx_start + offset : idx_end]) - 1 # 0-based index
-        n_rows = int(md_block[block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Rows'])
-        n_cols = int(md_block[block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Columns'])
+        md_tileregions = md_block[block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']
+        if len(md_tileregions) > 1:
+            i = 0
+            tile_used = False
+            while i < len(md_tileregions) and tile_used is False:
+                if md_tileregions[i]['IsUsedForAcquisition'] == 'true':
+                    tile_used = True
+                else:
+                    i += 1
+            n_rows = int(md_tileregions[i]['Rows'])
+            n_cols = int(md_tileregions[i]['Columns'])
+        else:
+            n_rows = int(md_block[block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Rows'])
+            n_cols = int(md_block[block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Columns'])
     return n_rows, n_cols
 
 
