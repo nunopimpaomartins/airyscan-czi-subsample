@@ -72,7 +72,7 @@ def get_tile_grid_position_from_tile_index(tile_index, num_cols):
         'x': tile_index % num_cols if (tile_index // num_cols) % 2 == 0 else num_cols - 1 - (tile_index % num_cols)
     }
 
-def get_mosaic_shape_from_parent_file(data_path, file_name, name_substring):
+def get_mosaic_shape_from_parent_file(data_path, file_name, name_substring, file_extension):
     """
     Get Mosaic tile shape from parent czi file.
     This function reads the metadata from the parent file and returns the shape of the mosaic.
@@ -98,10 +98,13 @@ def get_mosaic_shape_from_parent_file(data_path, file_name, name_substring):
     else:
         idx_start = parent_filelist_filtered[0].index(name_substring)
         offset = len(name_substring)
-        idx_end = parent_filelist_filtered[0].index('_', idx_start + offset, len(parent_filelist_filtered[0]))
+        if file_extension == '.czi':
+            idx_end = parent_filelist_filtered[0].index('-', idx_start + offset, len(parent_filelist_filtered[0]))
+        else:
+            idx_end = parent_filelist_filtered[0].index('_', idx_start + offset, len(parent_filelist_filtered[0]))
         block_index = int(parent_filelist_filtered[0][idx_start + offset : idx_end]) - 1 # 0-based index
         md_tileregions = md_block[block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']
-        if len(md_tileregions) > 1:
+        if type(md_tileregions) is list: # when there are multiple tile regions it becomes a list, else it is a dict with TileRegion properties
             i = 0
             tile_used = False
             while i < len(md_tileregions) and tile_used is False:
@@ -112,8 +115,8 @@ def get_mosaic_shape_from_parent_file(data_path, file_name, name_substring):
             n_rows = int(md_tileregions[i]['Rows'])
             n_cols = int(md_tileregions[i]['Columns'])
         else:
-            n_rows = int(md_block[block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Rows'])
-            n_cols = int(md_block[block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']['Columns'])
+            n_rows = int(md_tileregions['Rows'])
+            n_cols = int(md_tileregions['Columns'])
     return n_rows, n_cols
 
 
@@ -197,7 +200,7 @@ def main(datapath='.', extension='.czi', metadata_substring='AcquisitionBlock'):
                 filelist_filtered.append(name)
 
         n_tiles = int(len(filelist_filtered))
-        n_rows, n_columns = get_mosaic_shape_from_parent_file(datapath, original_name, metadata_substring)
+        n_rows, n_columns = get_mosaic_shape_from_parent_file(datapath, original_name, metadata_substring, extension)
         print('Number of tiles: %i' % n_tiles)
         print('Mosaic shape: %i rows, %i columns' % (n_rows, n_columns))
 
@@ -214,15 +217,27 @@ def main(datapath='.', extension='.czi', metadata_substring='AcquisitionBlock'):
         print("\n".join([f"Tile {itile}: " + str(get_tile_grid_position_from_tile_index(itile, n_columns)) for itile, tile in enumerate(tile_file_indexes)]))
 
         # Getting image data voxel scales
-        file_path = str(datapath / filelist_tiles[0])
-        store = parse_url(file_path, mode="r")
-        reader = Reader(store)
-        nodes = list(reader())
-        image_node = nodes[0]  # Get the first image
+        if extension == '.czi':
+            # For CZI files, we need to read the first file to get the metadata
+            file_path = str(datapath / filelist_tiles[0])
+            img = BioImage(
+                file_path, 
+                reader=bioio_czi.Reader, 
+                reconstruct_mosaic=False,
+                include_subblock_metadata=True,
+                use_aicspylibczi=True,
+            )
+            scale = {'z': img.scale.Z, 'y': img.scale.Y, 'x': img.scale.X}
+        else:
+            file_path = str(datapath / filelist_tiles[0])
+            store = parse_url(file_path, mode="r")
+            reader = Reader(store)
+            nodes = list(reader())
+            image_node = nodes[0]  # Get the first image
 
-        # Get the pixel sizes (scales) of the first, raw, pyramid image
-        scales = image_node.metadata['coordinateTransformations'][0][0]['scale']
-        scale = {'z': scales[-3], 'y': scales[-2], 'x': scales[-1]}
+            # Get the pixel sizes (scales) of the first, raw, pyramid image
+            scales = image_node.metadata['coordinateTransformations'][0][0]['scale']
+            scale = {'z': scales[-3], 'y': scales[-2], 'x': scales[-1]}
         print('Voxel scales: %s' % scale)
 
         overlap = {
@@ -230,11 +245,18 @@ def main(datapath='.', extension='.czi', metadata_substring='AcquisitionBlock'):
             'y': 0.1,
             # 'z': 0.1
         }
-        tile_shape = {
-            'z': image_node.data[0].shape[-3], # to get the Z dimension
-            'y': image_node.data[0].shape[-2], # to get the Y dimension
-            'x': image_node.data[0].shape[-1] # to get the X dimension
-        }
+        if extension == '.czi':
+            tile_shape = {
+                'z': img.dims.Z,
+                'y': img.dims.Y,
+                'x': img.dims.X
+            }
+        else:
+            tile_shape = {
+                'z': image_node.data[0].shape[-3], # to get the Z dimension
+                'y': image_node.data[0].shape[-2], # to get the Y dimension
+                'x': image_node.data[0].shape[-1] # to get the X dimension
+            }
         print('Tile shape: %s' % tile_shape)
 
         translations = []
