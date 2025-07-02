@@ -4,7 +4,6 @@ from pathlib import Path
 import argparse
 from tqdm import tqdm
 
-import dask.config
 import xarray as xr
 import numpy as np
 import dask.diagnostics

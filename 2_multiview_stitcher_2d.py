@@ -4,14 +4,12 @@ from pathlib import Path
 import argparse
 from tqdm import tqdm
 
-import dask.config
 import xarray as xr
 import numpy as np
 import dask.diagnostics
 import dask.array as da 
 from ome_zarr.io import parse_url
 from ome_zarr.reader import Reader
-import zarr
 from multiview_stitcher import spatial_image_utils as si_utils
 from multiview_stitcher import (
     fusion,
