@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 import argparse
-import tqdm
+from tqdm import tqdm
 
 from bioio import BioImage
 import bioio_czi
@@ -20,7 +20,7 @@ if args.dataPath is None:
 
 basedir = Path(args.dataPath)
 
-def main(datapath='.', extension='.tif'):
+def main(datapath='.', extension='.czi'):
     filelist = os.listdir(datapath)
 
     filelist = [f for f in filelist if f.find(extension) > 0]
@@ -31,8 +31,8 @@ def main(datapath='.', extension='.tif'):
     savedir.mkdir(parents=True, exist_ok=True)
     print('Saving output to:', savedir)
 
-    for file in tqdm.tqdm(filelist):
-        filepath = str(datapath) + '/' + file
+    for file in tqdm(filelist):
+        filepath = datapath / file
         filename_noext = file[:file.index(extension)]
         print('Processing file:', filepath)
 
