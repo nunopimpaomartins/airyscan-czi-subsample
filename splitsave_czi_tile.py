@@ -94,5 +94,5 @@ def main(datapath='.', extension='.czi'):
                     )
                 
 
-
-main(basedir, args.extension)
+if __name__ == '__main__':
+    main(basedir, args.extension)
