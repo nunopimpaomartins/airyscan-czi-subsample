@@ -31,7 +31,7 @@ def main(datapath='.', extension='.czi'):
     savedir.mkdir(parents=True, exist_ok=True)
     print('Saving output to:', savedir)
 
-    for file in tqdm(filelist):
+    for file in tqdm(filelist, desc='Processing files'):
         filepath = datapath / file
         filename_noext = file[:file.index(extension)]
         print('Processing file:', filepath)
@@ -49,7 +49,7 @@ def main(datapath='.', extension='.czi'):
             print('Image is not mosaic, skipping')
             continue
 
-        for scene in img.scenes:
+        for scene in tqdm(img.scenes, desc='Processing scenes'):
             img.set_scene(scene)
             print('Current scene:', scene)
 
@@ -59,7 +59,7 @@ def main(datapath='.', extension='.czi'):
             scale_y = img.scale.Y * 10**-6
             scale_z = img.scale.Z * 10**-6
 
-            for tile in range(n_tiles):
+            for tile in tqdm(range(n_tiles), desc='Processing tiles'):
                 img_data = img.get_image_dask_data(img.dims.order[1:], M=tile) #TODO better strategy to exclude dimension to split
                 img_data_tile = img_data.compute()
 
