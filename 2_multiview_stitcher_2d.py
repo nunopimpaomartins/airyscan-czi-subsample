@@ -66,8 +66,8 @@ def get_tile_grid_position_from_tile_index(tile_index, num_cols):
     """
     return {
         'z': 0,
-        'y': tile_index // num_cols,
-        'x': tile_index % num_cols if (tile_index // num_cols) % 2 == 0 else num_cols - 1 - (tile_index % num_cols)
+        'y': tile_index % num_cols if (tile_index // num_cols) % 2 == 0 else num_cols - 1 - (tile_index % num_cols),
+        'x': tile_index // num_cols,
     }
 
 def get_mosaic_shape_from_parent_file(data_path, file_name, name_substring, file_extension):
