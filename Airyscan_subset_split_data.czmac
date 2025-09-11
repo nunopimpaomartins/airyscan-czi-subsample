@@ -64,7 +64,7 @@ for i in range(0,filesL.Length):
         substack = Zen.Processing.Utilities.CreateSubset(image, stack_range_subets[j])
         Zen.Application.Documents.Add(substack)
         substack.Name = filename_no_ext + "_sub" + str(j+1)
-        Zen.Processing.Utilities.SplitScenes(substack, OutPath, ZenCompressionMethod.None, False, False, False) 
+        Zen.Processing.Utilities.SplitScenes(substack, OutPath, ZenCompressionMethod.Zstd, False, False, False)
         substack.Close()
     
     image.Close()
