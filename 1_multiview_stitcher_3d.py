@@ -112,6 +112,7 @@ def tile_registration(data_array):
             registration_binning={'z': 1, 'y': 2, 'x': 2},
             reg_channel_index=0,
             transform_key=curr_transform_key,
+            overlap_tolerance=0,
             new_transform_key='affine_registered',
             pre_registration_pruning_method="keep_axis_aligned",
         )
