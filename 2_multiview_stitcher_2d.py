@@ -66,8 +66,8 @@ def get_tile_grid_position_from_tile_index(tile_index, num_cols):
     """
     return {
         'z': 0,
-        'y': tile_index % num_cols if (tile_index // num_cols) % 2 == 0 else num_cols - 1 - (tile_index % num_cols),
-        'x': tile_index // num_cols,
+        'y': tile_index // num_cols,
+        'x': tile_index % num_cols if (tile_index // num_cols) % 2 == 0 else num_cols - 1 - (tile_index % num_cols),
     }
 
 def get_mosaic_shape_from_parent_file(data_path, file_name, name_substring, file_extension):
@@ -161,9 +161,10 @@ def tile_registration(data_array):
     with dask.diagnostics.ProgressBar():
         params = registration.register(
             data_array,
-            registration_binning={'z': 1, 'y': 2, 'x': 2},
+            registration_binning={'z': 2, 'y': 2, 'x': 2},
             reg_channel_index=0,
             transform_key=curr_transform_key,
+            overlap_tolerance=0,
             new_transform_key='affine_registered',
             pre_registration_pruning_method="keep_axis_aligned",
         )
