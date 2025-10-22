@@ -161,7 +161,7 @@ def tile_registration(data_array):
     with dask.diagnostics.ProgressBar():
         params = registration.register(
             data_array,
-            registration_binning={'z': 2, 'y': 2, 'x': 2},
+            registration_binning={'z': 1, 'y': 2, 'x': 2},
             reg_channel_index=0,
             transform_key=curr_transform_key,
             overlap_tolerance=0,
