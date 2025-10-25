@@ -31,8 +31,10 @@ basedir = Path(args.dataPath)
 
 # get the image reader based on the file extension
 if args.extension == '.czi':
-    from bioio import BioImage
-    import bioio_czi
+    # from bioio import BioImage
+    # import bioio_czi
+    from pylibCZIrw import czi as pyczi
+
 else:
     from tifffile import imread
 
@@ -225,16 +227,29 @@ def main(datapath='.', extension='.czi'):
                 if os.path.exists(zarr_path) and not overwrite:
                     im_data = da.from_zarr(os.path.join(zarr_path, '0'))[0] # drop t axis automatically added
                 else:
-                    file_path = str(datapath / tile)
-                    img = BioImage(
-                        file_path, 
-                        reader=bioio_czi.Reader, 
-                        reconstruct_mosaic=False,
-                        include_subblock_metadata=True,
-                        use_aicspylibczi=True,
-                    )
-                    # get data dimensions without T axis from metadata
-                    im_data = img.get_image_data(img.dims.order[img.dims.order.index('T')+1:])
+                    # file_path = str(datapath / tile)
+                    # img = BioImage(
+                    #     file_path, 
+                    #     reader=bioio_czi.Reader, 
+                    #     reconstruct_mosaic=False,
+                    #     include_subblock_metadata=True,
+                    #     use_aicspylibczi=True,
+                    # )
+                    # # get data dimensions without T axis from metadata
+                    # im_data = img.get_image_data(img.dims.order[img.dims.order.index('T')+1:])
+
+                    with pyczi.open_czi(file_path) as cziimg:
+                        tbd = cziimg.total_bounding_box
+                        im_data = np.zeros((tbd['Z'][1], tbd['C'][1], tbd['Y'][1], tbd['X'][1]))
+
+                        for t in range(tbd['T'][1]):
+                            for z in range(tbd['Z'][1]):
+                                for c in range(tbd['C'][1]):
+                                    temp = cziimg.read(
+                                        plane = {'C': c, "T": t, "Z": z},
+                                        scene = 0,
+                                    )
+                                    im_data[z, c] = temp.squeeze()
 
                 sim = si_utils.get_sim_from_array(
                     im_data,
