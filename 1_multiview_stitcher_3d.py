@@ -238,7 +238,7 @@ def main(datapath='.', extension='.czi'):
                 if os.path.exists(zarr_path) and not overwrite:
                     im_data = da.from_zarr(os.path.join(zarr_path, '0'))[0] # drop t axis automatically added
                 else:
-                    # file_path = str(datapath / tile)
+                    file_path = str(datapath / tile)
                     # img = BioImage(
                     #     file_path, 
                     #     reader=bioio_czi.Reader, 
