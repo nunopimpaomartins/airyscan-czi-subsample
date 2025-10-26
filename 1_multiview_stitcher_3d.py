@@ -182,6 +182,7 @@ def main(datapath='.', extension='.czi'):
             # )
             with pyczi.open_czi(file_path) as czidoc:
                 md_dic = czidoc.metadata
+                tbd = czidoc.total_bounding_box
                 pixelsize_x = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][0]['Value'])
                 pixelsize_y = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][1]['Value'])
                 pixelsize_z = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][2]['Value'])
@@ -199,9 +200,9 @@ def main(datapath='.', extension='.czi'):
                 'z': 0.1
             }
             tile_shape = {
-                'z': img.dims.Z,
-                'y': img.dims.Y,
-                'x': img.dims.X
+                'z': tbd['Z'][1],
+                'y': tbd['Y'][1],
+                'x': tbd['X'][1]
             }
             print('Tile shape: %s' % tile_shape)
 
