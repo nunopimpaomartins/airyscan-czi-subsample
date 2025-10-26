@@ -34,6 +34,7 @@ def main(datapath='.', extension='.czi'):
     for file in tqdm(filelist, desc='Processing files'):
         filepath = datapath / file
         filename_noext = file[:file.index(extension)]
+        filename_noext = filename_noext.replace(' ', '_')
         print('Processing file:', filepath)
 
         img = BioImage(
@@ -74,7 +75,7 @@ def main(datapath='.', extension='.czi'):
                     for t in range(img.dims['T'][0]):
                         for c in range(img.dims['C'][0]):
                             for z in range(img.dims['Z'][0]):
-                                temp_image = img_data_tile[t, c, z, ...]
+                                temp_image = img_data_tile[t][c][z]
                                 czidoc_w.write(
                                     data=temp_image,
                                     plane={
