@@ -173,14 +173,24 @@ def main(datapath='.', extension='.czi'):
 
             # Getting image data voxel scales
             file_path = str(datapath / filelist_tiles[0])
-            img = BioImage(
-                file_path,
-                reader=bioio_czi.Reader,
-                reconstruct_mosaic=False,
-                include_subblock_metadata=True,
-                use_aicspylibczi=True
-            )
-            scale = {'z': img.scale.Z, 'y': img.scale.Y, 'x': img.scale.X}
+            # img = BioImage(
+            #     file_path,
+            #     reader=bioio_czi.Reader,
+            #     reconstruct_mosaic=False,
+            #     include_subblock_metadata=True,
+            #     use_aicspylibczi=True
+            # )
+            with pyczi.open_czi(file_path) as czidoc:
+                md_dic = czidoc.metadata
+                pixelsize_x = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][0]['Value'])
+                pixelsize_y = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][1]['Value'])
+                pixelsize_z = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][2]['Value'])
+            
+            pixelsize_x = pixelsize_x / 10**-6  # convert scale from microns to meters
+            pixelsize_y = pixelsize_y / 10**-6  # convert scale from microns to meters
+            pixelsize_z = pixelsize_z / 10**-6  # convert scale from microns to meters
+
+            scale = {'z': pixelsize_z, 'y': pixelsize_y, 'x': pixelsize_x}
             print('Voxel scales: %s' % scale)
 
             overlap = {
