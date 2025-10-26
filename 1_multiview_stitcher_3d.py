@@ -251,16 +251,16 @@ def main(datapath='.', extension='.czi'):
 
                     with pyczi.open_czi(file_path) as cziimg:
                         tbd = cziimg.total_bounding_box
-                        im_data = np.zeros((tbd['Z'][1], tbd['C'][1], tbd['Y'][1], tbd['X'][1]))
+                        im_data = np.zeros((tbd['C'][1], tbd['Z'][1], tbd['Y'][1], tbd['X'][1]))
 
                         for t in range(tbd['T'][1]):
-                            for z in range(tbd['Z'][1]):
-                                for c in range(tbd['C'][1]):
+                            for c in range(tbd['C'][1]):
+                                for z in range(tbd['Z'][1]):
                                     temp = cziimg.read(
                                         plane = {'C': c, "T": t, "Z": z},
                                         scene = 0,
                                     )
-                                    im_data[z, c] = temp.squeeze()
+                                    im_data[c, z] = temp.squeeze()
 
                 sim = si_utils.get_sim_from_array(
                     im_data,
