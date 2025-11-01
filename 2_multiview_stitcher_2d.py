@@ -35,8 +35,9 @@ basedir = Path(args.dataPath)
 
 # get the image reader based on the file extension
 if args.extension == '.czi':
-    from bioio import BioImage
-    import bioio_czi
+    # from bioio import BioImage
+    # import bioio_czi
+    from pylibCZIrw import czi as pyczi
 else:
     from tifffile import imread
 
@@ -219,14 +220,27 @@ def main(datapath='.', extension='.czi', metadata_substring='AcquisitionBlock'):
         if extension == '.czi':
             # For CZI files, we need to read the first file to get the metadata
             file_path = str(datapath / filelist_tiles[0])
-            img = BioImage(
-                file_path, 
-                reader=bioio_czi.Reader, 
-                reconstruct_mosaic=False,
-                include_subblock_metadata=True,
-                use_aicspylibczi=True,
-            )
-            scale = {'z': img.scale.Z, 'y': img.scale.Y, 'x': img.scale.X}
+            # img = BioImage(
+            #     file_path, 
+            #     reader=bioio_czi.Reader, 
+            #     reconstruct_mosaic=False,
+            #     include_subblock_metadata=True,
+            #     use_aicspylibczi=True,
+            # )
+            # scale = {'z': img.scale.Z, 'y': img.scale.Y, 'x': img.scale.X}
+
+            with pyczi.open_czi(file_path) as czidoc:
+                md_dic = czidoc.metadata
+                tbd = czidoc.total_bounding_box
+                pixelsize_x = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][0]['Value'])
+                pixelsize_y = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][1]['Value'])
+                pixelsize_z = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][2]['Value'])
+            
+            pixelsize_x = pixelsize_x / 10**-6  # convert scale from microns to meters
+            pixelsize_y = pixelsize_y / 10**-6  # convert scale from microns to meters
+            pixelsize_z = pixelsize_z / 10**-6  # convert scale from microns to meters
+
+            scale = {'z': pixelsize_z, 'y': pixelsize_y, 'x': pixelsize_x}
         else:
             file_path = str(datapath / filelist_tiles[0])
             store = parse_url(file_path, mode="r")
@@ -237,6 +251,7 @@ def main(datapath='.', extension='.czi', metadata_substring='AcquisitionBlock'):
             # Get the pixel sizes (scales) of the first, raw, pyramid image
             scales = image_node.metadata['coordinateTransformations'][0][0]['scale']
             scale = {'z': scales[-3], 'y': scales[-2], 'x': scales[-1]}
+        
         print('Voxel scales: %s' % scale)
 
         overlap = {
@@ -246,9 +261,9 @@ def main(datapath='.', extension='.czi', metadata_substring='AcquisitionBlock'):
         }
         if extension == '.czi':
             tile_shape = {
-                'z': img.dims.Z,
-                'y': img.dims.Y,
-                'x': img.dims.X
+                'z': tbd['Z'][1],
+                'y': tbd['Y'][1],
+                'x': tbd['X'][1]
             }
         else:
             tile_shape = {
@@ -295,15 +310,28 @@ def main(datapath='.', extension='.czi', metadata_substring='AcquisitionBlock'):
                 im_data = da.from_zarr(os.path.join(zarr_path, '0'))[0] # drop t axis automatically added
             else:
                 file_path = str(datapath / tile)
-                img = BioImage(
-                    file_path, 
-                    reader=bioio_czi.Reader, 
-                    reconstruct_mosaic=False,
-                    include_subblock_metadata=True,
-                    use_aicspylibczi=True,
-                )
+                # img = BioImage(
+                #     file_path, 
+                #     reader=bioio_czi.Reader, 
+                #     reconstruct_mosaic=False,
+                #     include_subblock_metadata=True,
+                #     use_aicspylibczi=True,
+                # )
                 # get data dimensions without T axis from metadata
-                im_data = img.get_image_data(img.dims.order[img.dims.order.index('T')+1:])
+                # im_data = img.get_image_data(img.dims.order[img.dims.order.index('T')+1:])
+
+                with pyczi.open_czi(file_path) as cziimg:
+                        tbd = cziimg.total_bounding_box
+                        im_data = np.zeros((tbd['C'][1], tbd['Z'][1], tbd['Y'][1], tbd['X'][1]))
+
+                        for t in range(tbd['T'][1]):
+                            for c in range(tbd['C'][1]):
+                                for z in range(tbd['Z'][1]):
+                                    temp = cziimg.read(
+                                        plane = {'C': c, "T": t, "Z": z},
+                                        scene = 0,
+                                    )
+                                    im_data[c, z] = temp.squeeze()
 
             sim = si_utils.get_sim_from_array(
                 im_data,
