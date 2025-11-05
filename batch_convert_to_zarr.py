@@ -55,6 +55,7 @@ def main(datapath='.', extension='.czi'):
         # scale = {'z': img.scale.Z, 'y': img.scale.Y, 'x': img.scale.X}
         with pyczi.open_czi(file_path) as czidoc:
             md_dic = czidoc.metadata
+            tbd = czidoc.total_bounding_box
             pixelsize_x = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][0]['Value'])
             pixelsize_y = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][1]['Value'])
             pixelsize_z = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][2]['Value'])
@@ -65,6 +66,10 @@ def main(datapath='.', extension='.czi'):
 
         scale = {'z': pixelsize_z, 'y': pixelsize_y, 'x': pixelsize_x}
         print('Voxel scales: %s' % scale)
+        shape = ''
+        if extension == '.czi':
+             shape = {'t': tbd['T'][1], 'c': tbd['C'][1], 'z': tbd['Z'][1], 'y': tbd['Y'][1], 'x': tbd['X'][1]}
+        print('Data shape: %s' % shape)
         
         overwrite = True
         # remove spaces from filename
