@@ -35,7 +35,7 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
     print('Saving output to:', savedir)
 
     for file in tqdm(filelist, desc='Processing files'):
-        filepath = datapath / file
+        filepath = str(datapath / file)
         filename_noext = file[:file.index(extension)]
         filename_noext = filename_noext.replace(' ', '_')
         print('Processing file:', filepath)
