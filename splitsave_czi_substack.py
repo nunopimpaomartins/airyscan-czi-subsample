@@ -58,7 +58,7 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
         scale = {'z': pixelsize_z, 'y': pixelsize_y, 'x': pixelsize_x}
         print('Voxel scales: %s' % scale)
 
-        n_slices = tbd['Z'][0]
+        n_slices = tbd['Z'][1]
 
         if n_slices > max_z_slices:
             # compute  z ranges to load and save
