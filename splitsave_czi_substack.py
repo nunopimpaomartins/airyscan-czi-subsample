@@ -28,7 +28,7 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
 
     filelist = [f for f in filelist if f.find(extension) > 0]
     filelist.sort()
-    print('Nr of %s files in dir: %s' % extension, len(filelist))
+    print('Nr of %s files in dir: %s' % (extension, len(filelist)))
 
     savedir = Path( str(basedir) + '/substack_czi/')
     savedir.mkdir(parents=True, exist_ok=True)
