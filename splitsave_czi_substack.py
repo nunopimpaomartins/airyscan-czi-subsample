@@ -28,19 +28,20 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
 
     filelist = [f for f in filelist if f.find(extension) > 0]
     filelist.sort()
-    print('Nr of czi files in dir:', len(filelist))
+    print('Nr of %s files in dir: %s' % extension, len(filelist))
 
-    savedir = Path(str(basedir) + '/substack_czi/')
+    savedir = Path( str(basedir) + '/substack_czi/')
     savedir.mkdir(parents=True, exist_ok=True)
     print('Saving output to:', savedir)
 
     for file in tqdm(filelist, desc='Processing files'):
-        filepath = str(datapath / file)
+        file_path = str(datapath / file)
         filename_noext = file[:file.index(extension)]
         filename_noext = filename_noext.replace(' ', '_')
-        print('Processing file:', filepath)
+        print('File path:', file_path)
+        print("File name:", filename_noext)
 
-        with pyczi.open_czi(filepath) as czidoc:
+        with pyczi.open_czi(file_path) as czidoc:
             md_dic = czidoc.metadata
             tbd = czidoc.total_bounding_box
             pixelsize_x = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][0]['Value'])
@@ -78,7 +79,7 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
             print("Substack ranges:", stack_range_subets)
 
             for i in tqdm(range(len(stack_range_subets)), desc='Processing substacks'):
-                with pyczi.open_czi(filepath) as cziimg:
+                with pyczi.open_czi(file_path) as cziimg:
                     tbd = cziimg.total_bounding_box
                     im_data = np.zeros((tbd['T'][1], tbd['C'][1], stack_range_subets[i][1] - stack_range_subets[i][0], tbd['Y'][1], tbd['X'][1]))
 
