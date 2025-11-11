@@ -65,6 +65,7 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
             stack_range_subets = [None]*z_split_factor
             z_middle = int(math.floor(n_slices / z_split_factor)) # compute substack size to fit in memory
             z_middle_overlap = int(math.ceil(z_middle * 0.05)) # computer substack 5% overlap in Z
+            print("Splitting into %s substacks" % z_split_factor)
 
             for j in range(len(stack_range_subets)):
                 if j == 0:
@@ -73,8 +74,10 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
                     stack_range_subets[j] = ((j * z_middle) - z_middle_overlap , n_slices)
                 else:
                     stack_range_subets[j] =  (((j * z_middle) - z_middle_overlap), ((j + 1) * z_middle) + z_middle_overlap)
+            
+            print("Substack ranges:", stack_range_subets)
 
-            for i in range(len(stack_range_subets)):
+            for i in tqdm(range(len(stack_range_subets)), desc='Processing substacks'):
                 with pyczi.open_czi(filepath) as cziimg:
                     tbd = cziimg.total_bounding_box
                     im_data = np.zeros((tbd['T'][1], tbd['C'][1], stack_range_subets[i][1] - stack_range_subets[i][0], tbd['Y'][1], tbd['X'][1]))
@@ -89,7 +92,7 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
                                 im_data[t, c, z] = temp.squeeze()
 
                 subset_save_path = str(savedir) + '/' + filename_noext + '_subset' + str(i+1) + '.zarr'
-                print('Tile save path:', subset_save_path)
+                print('Subset save path:', subset_save_path)
                     
                 sim = si_utils.get_sim_from_array(
                         im_data,
