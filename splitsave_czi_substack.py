@@ -39,7 +39,7 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
         filename_noext = file[:file.index(extension)]
         filename_noext = filename_noext.replace(' ', '_')
         print('File path:', file_path)
-        print("File name:", filename_noext)
+        # print("File name:", filename_noext)
 
         with pyczi.open_czi(file_path) as czidoc:
             md_dic = czidoc.metadata
