@@ -3,6 +3,9 @@ from pathlib import Path
 import argparse
 from tqdm import tqdm
 import math
+from multiview_stitcher import spatial_image_utils as si_utils
+from multiview_stitcher import ngff_utils, msi_utils
+import numpy as np
 
 from pylibCZIrw import czi as pyczi
 
@@ -63,51 +66,43 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
             z_middle = int(math.floor(n_slices / z_split_factor)) # compute substack size to fit in memory
             z_middle_overlap = int(math.ceil(z_middle * 0.05)) # computer substack 5% overlap in Z
 
-            for j in range(0, len(stack_range_subets)):
+            for j in range(len(stack_range_subets)):
                 if j == 0:
-                    stack_range_subets[j] = (1, ((j + 1) * z_middle) + z_middle_overlap)
+                    stack_range_subets[j] = (1, z_middle + z_middle_overlap)
                 elif j == len(stack_range_subets)-1:
                     stack_range_subets[j] = ((j * z_middle) - z_middle_overlap , n_slices)
                 else:
                     stack_range_subets[j] =  (((j * z_middle) - z_middle_overlap), ((j + 1) * z_middle) + z_middle_overlap)
 
-            img_data = img.get_image_dask_data(img.dims.order[1:], M=tile) #TODO better strategy to exclude dimension to split
-            img_data_tile = img_data.compute()
+            for i in range(len(stack_range_subets)):
+                with pyczi.open_czi(filepath) as cziimg:
+                    tbd = cziimg.total_bounding_box
+                    im_data = np.zeros((tbd['T'][1], tbd['C'][1], stack_range_subets[i][1] - stack_range_subets[i][0], tbd['Y'][1], tbd['X'][1]))
 
-            ch_names = {}
-            for i in range(len(img.channel_names)):
-                ch_names[i] = img.channel_names[i]
+                    for t in range(tbd['T'][1]):
+                        for c in range(tbd['C'][1]):
+                            for z in range(stack_range_subets[i][0], stack_range_subets[i][1]):
+                                temp = cziimg.read(
+                                    plane = {'C': c, "T": t, "Z": z},
+                                    scene = 0,
+                                )
+                                im_data[t, c, z] = temp.squeeze()
 
-            tile_save_path = str(savedir) + '/' + filename_noext + '_tile' + str(tile+1).zfill(2) + '.czi'
-            print('Tile save path:', tile_save_path)
+                subset_save_path = str(savedir) + '/' + filename_noext + '_subset' + str(i+1) + '.zarr'
+                print('Tile save path:', subset_save_path)
+                    
+                sim = si_utils.get_sim_from_array(
+                        im_data,
+                        dims=["t", "c", "z", "y", "x"],
+                        scale=scale,
+                        )
 
-            with pyczi.create_czi(tile_save_path, exist_ok=True) as czidoc_w:
-                for t in range(img.dims['T'][0]):
-                    for c in range(img.dims['C'][0]):
-                        for z in range(img.dims['Z'][0]):
-                            temp_image = img_data_tile[t][c][z]
-                            czidoc_w.write(
-                                data=temp_image,
-                                plane={
-                                    'T': t,
-                                    'C': c,
-                                    'Z': z,
-                                },
-                                compression_options = "zstd0:ExplicitLevel=2"
-                            )
-                
-                czidoc_w.write_metadata(
-                    filename_noext + '_tile' + str(tile+1).zfill(2),
-                    channel_names=ch_names,
-                    scale_x=scale_x,
-                    scale_y=scale_y,
-                    scale_z=scale_z,
-                )
+                # write to OME-Zarr
+                ngff_utils.write_sim_to_ome_zarr(sim, subset_save_path, overwrite=True)
+                print('====================')
         else:
             print('Image has less than max Z slices (%s), skipping' % max_z_slices)
             continue
-
-                
 
 if __name__ == '__main__':
     main(basedir, args.extension, args.maxZSlices)
