@@ -74,7 +74,7 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
                 elif j == len(stack_range_subets)-1:
                     stack_range_subets[j] = ((j * z_middle) - z_middle_overlap - 1, n_slices)
                 else:
-                    stack_range_subets[j] =  (((j * z_middle) - z_middle_overlap), ((j + 1) * z_middle) + z_middle_overlap)
+                    stack_range_subets[j] =  (((j * z_middle) - z_middle_overlap), ((j + 1) * z_middle) + z_middle_overlap + 1)
             
             print("Substack ranges:", stack_range_subets)
 
