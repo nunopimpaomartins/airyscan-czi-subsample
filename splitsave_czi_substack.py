@@ -70,7 +70,7 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
 
             for j in range(len(stack_range_subets)):
                 if j == 0:
-                    stack_range_subets[j] = (1, z_middle + z_middle_overlap)
+                    stack_range_subets[j] = (0, z_middle + z_middle_overlap)
                 elif j == len(stack_range_subets)-1:
                     stack_range_subets[j] = ((j * z_middle) - z_middle_overlap , n_slices)
                 else:
