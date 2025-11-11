@@ -38,14 +38,14 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
         filepath = datapath / file
         filename_noext = file[:file.index(extension)]
         filename_noext = filename_noext.replace(' ', '_')
-        print('Processing file:', filename_noext)
+        print('Processing file:', filepath)
 
         with pyczi.open_czi(filepath) as czidoc:
-                md_dic = czidoc.metadata
-                tbd = czidoc.total_bounding_box
-                pixelsize_x = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][0]['Value'])
-                pixelsize_y = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][1]['Value'])
-                pixelsize_z = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][2]['Value'])
+            md_dic = czidoc.metadata
+            tbd = czidoc.total_bounding_box
+            pixelsize_x = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][0]['Value'])
+            pixelsize_y = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][1]['Value'])
+            pixelsize_z = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][2]['Value'])
 
         print('Image dimensions:', tbd)
 
