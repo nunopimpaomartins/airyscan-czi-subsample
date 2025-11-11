@@ -10,12 +10,6 @@ The current workflow consists of splitting raw Airyscan data into substacks for 
 Stitching is done with the [`multiview stitcher`](https://github.com/multiview-stitcher/multiview-stitcher/tree/main) and using OME Zarr as the data format.
 
 ### Pipeline
-![Schematic Pipeline](/media/schematic_processing_pipeline.png)
-
-
-## Environment
-
-## Usage
 1. Process RAW data in `Zeiss Zen` with the Zen compatible script
     - using: `Airyscan_subset_split_data.czmac`
 1. This will generate multiple raw substacks. Processed them individually or in Batch in `Zeiss Zen`
@@ -27,6 +21,14 @@ Stitching is done with the [`multiview stitcher`](https://github.com/multiview-s
 1. Stitch files in 2D using files generated from previous script
     -using:" `2_multiview_stitcher_2d.py`
 
+<!-- ![Schematic Pipeline](/media/schematic_processing_pipeline.png) -->
+<img src="./media/schematic_processing_pipeline.png" alt="Schematic pipeline" width="300"/>
+
+## Environment
+
+
+## Usage
+More detailed usage of each script and their arguments.
 
 ### Airyscan_subset_split_data.czmac
 
