@@ -82,6 +82,7 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
                 with pyczi.open_czi(file_path) as cziimg:
                     tbd = cziimg.total_bounding_box
                     im_data = np.zeros((tbd['T'][1], tbd['C'][1], stack_range_subets[i][1] - stack_range_subets[i][0], tbd['Y'][1], tbd['X'][1]))
+                    print("Image shape: ", im_data.shape)
 
                     for t in range(tbd['T'][1]):
                         for c in range(tbd['C'][1]):
