@@ -70,18 +70,18 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
 
             for j in range(len(stack_range_subets)):
                 if j == 0:
-                    stack_range_subets[j] = (0, z_middle + z_middle_overlap + 1)
+                    stack_range_subets[j] = (0, z_middle + z_middle_overlap
                 elif j == len(stack_range_subets)-1:
-                    stack_range_subets[j] = ((j * z_middle) - z_middle_overlap - 1, n_slices)
+                    stack_range_subets[j] = ((j * z_middle) - z_middle_overlap, n_slices)
                 else:
-                    stack_range_subets[j] =  (((j * z_middle) - z_middle_overlap), ((j + 1) * z_middle) + z_middle_overlap + 1)
+                    stack_range_subets[j] =  (((j * z_middle) - z_middle_overlap), ((j + 1) * z_middle) + z_middle_overlap)
             
             print("Substack ranges:", stack_range_subets)
 
             for i in tqdm(range(len(stack_range_subets)), desc='Processing substacks'):
                 with pyczi.open_czi(file_path) as cziimg:
                     tbd = cziimg.total_bounding_box
-                    im_data = np.zeros((tbd['T'][1], tbd['C'][1], stack_range_subets[i][1] - stack_range_subets[i][0] + 1, tbd['Y'][1], tbd['X'][1]))
+                    im_data = np.zeros((tbd['T'][1], tbd['C'][1], stack_range_subets[i][1] - stack_range_subets[i][0], tbd['Y'][1], tbd['X'][1]))
                     print("Image shape: ", im_data.shape)
 
                     for t in range(tbd['T'][1]):
