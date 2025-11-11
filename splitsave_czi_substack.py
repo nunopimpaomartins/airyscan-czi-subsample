@@ -91,7 +91,7 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
                                     plane = {'C': c, "T": t, "Z": z},
                                     scene = 0,
                                 )
-                                im_data[t, c, z] = temp.squeeze()
+                                im_data[t, c, z - stack_range_subets[i][0]] = temp.squeeze()
 
                 subset_save_path = str(savedir) + '/' + filename_noext + '_subset' + str(i+1) + '.zarr'
                 print('Subset save path:', subset_save_path)
