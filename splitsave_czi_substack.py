@@ -70,7 +70,7 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
 
             for j in range(len(stack_range_subets)):
                 if j == 0:
-                    stack_range_subets[j] = (0, z_middle + z_middle_overlap
+                    stack_range_subets[j] = (0, z_middle + z_middle_overlap)
                 elif j == len(stack_range_subets)-1:
                     stack_range_subets[j] = ((j * z_middle) - z_middle_overlap, n_slices)
                 else:
@@ -104,10 +104,10 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
 
                 # write to OME-Zarr
                 ngff_utils.write_sim_to_ome_zarr(sim, subset_save_path, overwrite=True)
-                print('====================')
         else:
             print('Image has less than max Z slices (%s), skipping' % max_z_slices)
             continue
+        print('====================')
 
 if __name__ == '__main__':
     main(basedir, args.extension, args.maxZSlices)
