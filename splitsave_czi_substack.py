@@ -23,6 +23,30 @@ if args.dataPath is None:
 
 basedir = Path(args.dataPath)
 
+
+def prepare_savename(name, index):
+    """
+    Change save name to match what is expected for 3D stitching script
+    
+    Parameters
+    ----------
+    name : string
+        File name to be change.
+    index : int
+        index of the substack.
+
+    Returns
+    ----------
+    savename : string
+        string file name compatible with following scripts
+    """
+    name = name.replace(' ', '_')
+    name_firstpart = name[:name.index('-Airyscan')]
+    name_lastpart = name[name.index('-Airyscan'):]
+    savename = name_firstpart + '_sub' + str(index + 1) + '-Scene-1' + name_lastpart + '.zarr'
+    return savename
+
+
 def main(datapath='.', extension='.czi', max_z_slices=300):
     filelist = os.listdir(datapath)
 
@@ -93,7 +117,10 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
                                 )
                                 im_data[t, c, z - stack_range_subets[i][0]] = temp.squeeze()
 
-                subset_save_path = str(savedir) + '/' + filename_noext + '_Sub' + str(i+1) + '-Scene1.zarr'
+                savename = prepare_savename(filename_noext, i)
+                print('Saving with file name: %s' % savename)
+
+                subset_save_path = str(savedir) + '/' + savename
                 print('Subset save path:', subset_save_path)
                     
                 sim = si_utils.get_sim_from_array(
@@ -107,7 +134,8 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
         else:
             print('Image has less than max Z slices (%s), skipping' % max_z_slices)
             continue
-        print('====================')
+        print('-------------------')
+    print('====================')
 
 if __name__ == '__main__':
     main(basedir, args.extension, args.maxZSlices)
