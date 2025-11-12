@@ -235,7 +235,8 @@ def main(datapath='.', extension='.czi'):
                 zarr_path = os.path.join(os.path.dirname(get_filename_from_tile_and_channel(datapath, tile)), filelist_savenames[itile])
 
                 # read tile image
-                if os.path.exists(zarr_path) and not overwrite:
+                # if os.path.exists(zarr_path) and not overwrite:
+                if extension == '.zarr' and os.path.exists(zarr_path):
                     im_data = da.from_zarr(os.path.join(zarr_path, '0'))[0] # drop t axis automatically added
                 else:
                     file_path = str(datapath / tile)
