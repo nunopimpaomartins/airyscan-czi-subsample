@@ -34,7 +34,9 @@ if args.extension == '.czi':
     # from bioio import BioImage
     # import bioio_czi
     from pylibCZIrw import czi as pyczi
-
+elif:
+    from ome_zarr.io import parse_url
+    from ome_zarr.reader import Reader
 else:
     from tifffile import imread
 
@@ -173,25 +175,30 @@ def main(datapath='.', extension='.czi'):
 
             # Getting image data voxel scales
             file_path = str(datapath / filelist_tiles[0])
-            # img = BioImage(
-            #     file_path,
-            #     reader=bioio_czi.Reader,
-            #     reconstruct_mosaic=False,
-            #     include_subblock_metadata=True,
-            #     use_aicspylibczi=True
-            # )
-            with pyczi.open_czi(file_path) as czidoc:
-                md_dic = czidoc.metadata
-                tbd = czidoc.total_bounding_box
-                pixelsize_x = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][0]['Value'])
-                pixelsize_y = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][1]['Value'])
-                pixelsize_z = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][2]['Value'])
-            
-            pixelsize_x = pixelsize_x / 10**-6  # convert scale from microns to meters
-            pixelsize_y = pixelsize_y / 10**-6  # convert scale from microns to meters
-            pixelsize_z = pixelsize_z / 10**-6  # convert scale from microns to meters
 
-            scale = {'z': pixelsize_z, 'y': pixelsize_y, 'x': pixelsize_x}
+            if extension == '.czi':
+                with pyczi.open_czi(file_path) as czidoc:
+                    md_dic = czidoc.metadata
+                    tbd = czidoc.total_bounding_box
+                    pixelsize_x = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][0]['Value'])
+                    pixelsize_y = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][1]['Value'])
+                    pixelsize_z = float(md_dic['ImageDocument']['Metadata']['Scaling']['Items']['Distance'][2]['Value'])
+                
+                pixelsize_x = pixelsize_x / 10**-6  # convert scale from microns to meters
+                pixelsize_y = pixelsize_y / 10**-6  # convert scale from microns to meters
+                pixelsize_z = pixelsize_z / 10**-6  # convert scale from microns to meters
+
+                scale = {'z': pixelsize_z, 'y': pixelsize_y, 'x': pixelsize_x}
+            else:
+                store = parse_url(file_path, mode="r")
+                reader = Reader(store)
+                nodes = list(reader())
+                image_node = nodes[0]  # Get the first image
+
+                # Get the pixel sizes (scales) of the first, raw, pyramid image
+                scales = image_node.metadata['coordinateTransformations'][0][0]['scale']
+                scale = {'z': scales[-3], 'y': scales[-2], 'x': scales[-1]}
+            
             print('Voxel scales: %s' % scale)
 
             overlap = {
@@ -220,8 +227,6 @@ def main(datapath='.', extension='.czi'):
             print("\n".join([f"Tile {itile}: " + str(t) for itile, t in enumerate(translations)]))
 
             # Read input tiles, convert to OME-Zarr files, then delete temporary files
-            overwrite = True
-
             # remove spaces from filename
             filelist_savenames = [f[:f.index(extension)].replace(' ', '_') + '.zarr' for f in filelist_tiles]
             print('Saving OME-Zarr files with names:')
@@ -237,8 +242,10 @@ def main(datapath='.', extension='.czi'):
                 # read tile image
                 # if os.path.exists(zarr_path) and not overwrite:
                 if extension == '.zarr' and os.path.exists(zarr_path):
+                    overwrite = False
                     im_data = da.from_zarr(os.path.join(zarr_path, '0'))[0] # drop t axis automatically added
                 else:
+                    overwrite = True
                     file_path = str(datapath / tile)
                     # img = BioImage(
                     #     file_path, 
