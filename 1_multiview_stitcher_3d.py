@@ -34,7 +34,7 @@ if args.extension == '.czi':
     # from bioio import BioImage
     # import bioio_czi
     from pylibCZIrw import czi as pyczi
-elif:
+elif args.extension == '.zarr':
     from ome_zarr.io import parse_url
     from ome_zarr.reader import Reader
 else:
