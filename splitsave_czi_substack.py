@@ -93,7 +93,7 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
                                 )
                                 im_data[t, c, z - stack_range_subets[i][0]] = temp.squeeze()
 
-                subset_save_path = str(savedir) + '/' + filename_noext + '_subset' + str(i+1) + '.zarr'
+                subset_save_path = str(savedir) + '/' + filename_noext + '_Subset-Scene' + str(i+1) + '.zarr'
                 print('Subset save path:', subset_save_path)
                     
                 sim = si_utils.get_sim_from_array(
