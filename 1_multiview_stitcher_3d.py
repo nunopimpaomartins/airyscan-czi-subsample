@@ -206,11 +206,18 @@ def main(datapath='.', extension='.czi'):
                 # 'y': 0.1,
                 'z': 0.1
             }
-            tile_shape = {
-                'z': tbd['Z'][1],
-                'y': tbd['Y'][1],
-                'x': tbd['X'][1]
-            }
+            if extension == '.czi':
+                tile_shape = {
+                    'z': tbd['Z'][1],
+                    'y': tbd['Y'][1],
+                    'x': tbd['X'][1]
+                }
+            else:
+                tile_shape = {
+                    'z': image_node.data[0].shape[-3], # to get the Z dimension
+                    'y': image_node.data[0].shape[-2], # to get the Y dimension
+                    'x': image_node.data[0].shape[-1] # to get the X dimension
+                }
             print('Tile shape: %s' % tile_shape)
 
             translations = []
