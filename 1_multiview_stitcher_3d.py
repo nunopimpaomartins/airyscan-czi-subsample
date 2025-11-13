@@ -318,11 +318,12 @@ def main(datapath='.', extension='.czi'):
                     fused, output_filename, overwrite=True
                 )
             
-            print('Removing temporary files...')
-            for itile, tile in enumerate(tqdm(filelist_tiles)):
-                zarr_path = os.path.join(os.path.dirname(get_filename_from_tile_and_channel(datapath, tile)), filelist_savenames[itile])
-                if os.path.exists(zarr_path):
-                    shutil.rmtree(zarr_path)
+            if extension == '.czi':
+                print('Removing temporary files...')
+                for itile, tile in enumerate(tqdm(filelist_tiles)):
+                    zarr_path = os.path.join(os.path.dirname(get_filename_from_tile_and_channel(datapath, tile)), filelist_savenames[itile])
+                    if os.path.exists(zarr_path):
+                        shutil.rmtree(zarr_path)
             
             print('====================')
     print('Done!')
