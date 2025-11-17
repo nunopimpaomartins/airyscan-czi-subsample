@@ -44,6 +44,16 @@ else:
 def get_unique_names(array, substring='.'):
     """
     Get unique names from a string array
+    Parameters
+    ----------
+    array : list of strings
+        List of strings to be processed.
+    substring : string
+        Substring to identify unique names. Will use substring position to cut the string.
+    Returns
+    ----------
+    unique_names : list of strings
+        List of unique names.
     """
     try:
         unique_names = [f[:f.index(substring)] for f in array]
@@ -135,7 +145,7 @@ def main(datapath='.', extension='.czi'):
 
     filelist = [f for f in filelist if f.endswith(extension)]
     filelist.sort()
-    print('Nr of czi files in dir: %i' % len(filelist))
+    print('Nr of %s files in dir: %i' % (extension, len(filelist)))
 
     savedir = Path(str(datapath) + '/stitched_tile_3d/')
     savedir.mkdir(parents=True, exist_ok=True)
@@ -171,7 +181,7 @@ def main(datapath='.', extension='.czi'):
             filelist_tiles = [filelist[i] for i in substack_file_indexes]
             print('\n '.join([x for x in filelist_tiles]))
             print('Tile grid indices:')
-            print("\n".join([f"Tile {itile}: " + str(get_tile_grid_position_from_tile_index(itile, n_substacks))for itile, tile in enumerate(substack_file_indexes)]))
+            print("\n".join([f"Tile {itile}: " + str(get_tile_grid_position_from_tile_index(itile, n_substacks)) for itile, tile in enumerate(substack_file_indexes)]))
 
             # Getting image data voxel scales
             file_path = str(datapath / filelist_tiles[0])
@@ -245,6 +255,7 @@ def main(datapath='.', extension='.czi'):
 
                 # set save path for OME-Zarr files
                 zarr_path = os.path.join(os.path.dirname(get_filename_from_tile_and_channel(datapath, tile)), filelist_savenames[itile])
+                print('OME-Zarr path: %s' % zarr_path)
 
                 # read tile image
                 # if os.path.exists(zarr_path) and not overwrite:
@@ -254,16 +265,6 @@ def main(datapath='.', extension='.czi'):
                 else:
                     overwrite = True
                     file_path = str(datapath / tile)
-                    # img = BioImage(
-                    #     file_path, 
-                    #     reader=bioio_czi.Reader, 
-                    #     reconstruct_mosaic=False,
-                    #     include_subblock_metadata=True,
-                    #     use_aicspylibczi=True,
-                    # )
-                    # # get data dimensions without T axis from metadata
-                    # im_data = img.get_image_data(img.dims.order[img.dims.order.index('T')+1:])
-
                     with pyczi.open_czi(file_path) as cziimg:
                         tbd = cziimg.total_bounding_box
                         im_data = np.zeros((tbd['C'][1], tbd['Z'][1], tbd['Y'][1], tbd['X'][1]))
@@ -286,7 +287,8 @@ def main(datapath='.', extension='.czi'):
                     )
 
                 # write to OME-Zarr
-                ngff_utils.write_sim_to_ome_zarr(sim, zarr_path, overwrite=overwrite)
+                if extension != '.zarr':
+                    ngff_utils.write_sim_to_ome_zarr(sim, zarr_path, overwrite=overwrite)
                 # replace sim with the sim read from the written OME-Zarr
                 sim = ngff_utils.read_sim_from_ome_zarr(zarr_path)
 
