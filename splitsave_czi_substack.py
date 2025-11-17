@@ -79,7 +79,7 @@ def main(datapath='.', extension='.czi', max_z_slices=300):
         scale_y = pixelsize_y / 10**-6
         scale_z = pixelsize_z / 10**-6
         
-        scale = {'z': pixelsize_z, 'y': pixelsize_y, 'x': pixelsize_x}
+        scale = {'z': scale_z, 'y': scale_y, 'x': scale_x}
         print('Voxel scales: %s' % scale)
 
         n_slices = tbd['Z'][1]
