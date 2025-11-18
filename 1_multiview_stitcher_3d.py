@@ -285,10 +285,11 @@ def main(datapath='.', extension='.czi'):
                     transform_key=io.METADATA_TRANSFORM_KEY,
                     )
 
-                # write to OME-Zarr
-                ngff_utils.write_sim_to_ome_zarr(sim, zarr_path, overwrite=overwrite)
-                # replace sim with the sim read from the written OME-Zarr
-                sim = ngff_utils.read_sim_from_ome_zarr(zarr_path)
+                if extension != '.zarr':
+                    # write to OME-Zarr
+                    ngff_utils.write_sim_to_ome_zarr(sim, zarr_path, overwrite=overwrite)
+                    # replace sim with the sim read from the written OME-Zarr
+                    sim = ngff_utils.read_sim_from_ome_zarr(zarr_path)
 
                 msim = msi_utils.get_msim_from_sim(sim)
                 zarr_paths.append(zarr_path)
