@@ -100,7 +100,9 @@ def get_mosaic_shape_from_parent_file(data_path, file_name, name_substring, file
         if file_extension == '.czi':
             idx_end = parent_filelist_filtered[0].index('-', idx_start + offset, len(parent_filelist_filtered[0]))
         else:
-            idx_end = parent_filelist_filtered[0].index('_', idx_start + offset, len(parent_filelist_filtered[0]))
+            idx_1 = parent_filelist_filtered[0].index('_', idx_start + offset, len(parent_filelist_filtered[0]))
+            idx_2 = parent_filelist_filtered[0].index('-', idx_start + offset, len(parent_filelist_filtered[0]))
+            idx_end = min(idx_1, idx_2) if (idx_1 >=0 and idx_2 >=0) else max(idx_1, idx_2) # get the valid index when found
         block_index = int(parent_filelist_filtered[0][idx_start + offset : idx_end]) - 1 # 0-based index
         md_tileregions = md_block[block_index]['SubDimensionSetups']['RegionsSetup']['SampleHolder']['TileRegions']['TileRegion']
         if type(md_tileregions) is list: # when there are multiple tile regions it becomes a list, else it is a dict with TileRegion properties
