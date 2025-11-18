@@ -251,6 +251,7 @@ def main(datapath='.', extension='.czi'):
 
             msims = []
             zarr_paths = []
+            overwrite = True
             for itile, tile in enumerate(tqdm(filelist_tiles)):
 
                 # set save path for OME-Zarr files
@@ -260,10 +261,8 @@ def main(datapath='.', extension='.czi'):
                 # read tile image
                 # if os.path.exists(zarr_path) and not overwrite:
                 if extension == '.zarr' and os.path.exists(zarr_path):
-                    overwrite = False
                     im_data = da.from_zarr(os.path.join(zarr_path, '0'))[0] # drop t axis automatically added
                 else:
-                    overwrite = True
                     file_path = str(datapath / tile)
                     with pyczi.open_czi(file_path) as cziimg:
                         tbd = cziimg.total_bounding_box
@@ -287,8 +286,7 @@ def main(datapath='.', extension='.czi'):
                     )
 
                 # write to OME-Zarr
-                if extension != '.zarr':
-                    ngff_utils.write_sim_to_ome_zarr(sim, zarr_path, overwrite=overwrite)
+                ngff_utils.write_sim_to_ome_zarr(sim, zarr_path, overwrite=overwrite)
                 # replace sim with the sim read from the written OME-Zarr
                 sim = ngff_utils.read_sim_from_ome_zarr(zarr_path)
 
